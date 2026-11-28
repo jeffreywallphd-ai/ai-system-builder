@@ -42,7 +42,10 @@ def scope_deferral_module():
     if spec is None or spec.loader is None:
         raise RoadmapError("The compatible technical scope deferral adapter is unavailable.")
     module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
+    try:
+        spec.loader.exec_module(module)
+    except (OSError, ImportError, SyntaxError):
+        raise RoadmapError("The compatible technical scope deferral adapter is unavailable.") from None
     return module
 
 
@@ -2908,7 +2911,10 @@ def validate_state_shape(repo: Path, state: dict[str, Any]) -> None:
         "storyTaskTracking",
     }
     reject_unknown(state, allowed, "state")
-    scope_deferral_module().validate_history(globals(), state)
+    if ("technicalScopeDeferrals" in state or any(
+            isinstance(row, dict) and row.get("type") == "technical-scope-deferred"
+            for row in require_list(state.get("history"), "state.history"))):
+        scope_deferral_module().validate_history(globals(), state)
     validate_story_tracking(state)
     validate_task_completion_history(state)
     for revision in require_list(state.get("workChunkPlanRevisions", []), "state.workChunkPlanRevisions"):

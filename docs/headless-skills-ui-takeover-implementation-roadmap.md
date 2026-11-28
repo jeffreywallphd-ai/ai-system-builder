@@ -3,7 +3,7 @@
 # Headless Skills and Revocable UI Takeover Implementation Roadmap
 
 - Status: `executing`
-- Updated: `2026-11-27T23:04:28Z`
+- Updated: `2026-11-28T00:29:51Z`
 
 ## Objective
 
@@ -143,7 +143,8 @@ The user selected both approval modes, available in chat and in the app. The hos
 | 7: Manage models, fine-tune and generate outputs | Select, download and verify an appropriate supported local model. Fine-tune and evaluate it from an approved dataset, and run supported generation workflows within checked resource limits. | rag-and-context | `implementing` |
 | 8: Select, plan and create reusable assets | Let the agent inspect the Catalog and User Library, select compatible exact assets, and create custom assets when the system needs a new component. | models-training-and-generation | `pending` |
 | 9: Compose, build, test and publish systems | Build the planned Canvas or Form system from exact data, Context, model and asset references through the supported authoring, test and publication lifecycle. | plan-from-written-request, data-acquisition-and-datasets, rag-and-context, models-training-and-generation, asset-selection-and-custom-creation | `pending` |
-| 10: Qualify coverage across the app | Deliver consistent support, discovery and actionable handoffs across the major product areas on both hosts. Show users which work needs their input and prove the complete workflow with repeatable tests. | plan-from-written-request, data-acquisition-and-datasets, rag-and-context, models-training-and-generation, asset-selection-and-custom-creation, compose-build-test-publish | `pending` |
+| 10: Generate images and import reviewed outputs | Let an authorized headless client generate an image with an explicitly selected supported local model, review the exact result and separately approve its import. Qualify real execution on both hosts when a compatible image model is available. | models-training-and-generation, compose-build-test-publish | `pending` |
+| 11: Qualify coverage across the app | Deliver consistent support, discovery and actionable handoffs across the major product areas on both hosts. Show users which work needs their input and prove the complete workflow with repeatable tests. | plan-from-written-request, data-acquisition-and-datasets, rag-and-context, models-training-and-generation, asset-selection-and-custom-creation, compose-build-test-publish, image-generation-and-output-import | `pending` |
 
 ## Increment 1: Use chat tools to author systems and keep saved data synchronized
 
@@ -438,7 +439,7 @@ Select, download and verify an appropriate supported local model. Fine-tune and 
 
 - **Discover and acquire supported models** (`models`): Search or inspect configured providers, resolve exact model/revision, estimate local resources, and use the existing bounded download and registry tasks.
 - **Fine-tune and evaluate** (`train-evaluate`): Select a compatible base, dataset version, training method and hardware budgets. Track training progress, saved checkpoints, resulting model and clearly scoped evaluation results.
-- **Generate and show results** (`generate-and-reveal`): Use existing approved text/image workflows, manage supported tasks and reveal exact model inventory, downloads, training jobs and generated artifacts.
+- **Generate and show results** (`generate-and-reveal`): Use existing approved text workflows, manage supported tasks and reveal exact model inventory, downloads, training jobs and generated artifacts.
 
 ### Tasks by story
 
@@ -520,12 +521,12 @@ Task counts show implementation tracking. Technical qualification remains separa
   - Run a bounded fine-tuning task (`run-approved-fine-tuning`): complete
   - Evaluate and review the trained candidate (`evaluate-trained-model-candidate`): complete
 - **Generate and show results**: 0 of 2 tasks complete
-  - Generate and import supported outputs (`generate-and-import-model-output`): planned
+  - Generate and review supported text outputs (`generate-and-import-model-output`): planned
   - Show and qualify exact model outcomes (`qualify-model-workflows-on-hosts`): planned
 
 ### Deliverables
 
-- Model download, training, evaluation and supported image/text generation tool families
+- Model download, training, evaluation and supported text generation tool families
 - Task and notification integration, including hardware admission and verified actor/target ownership
 
 ### Acceptance criteria
@@ -533,7 +534,7 @@ Task counts show implementation tracking. Technical qualification remains separa
 | Criterion | Qualification | Latest evidence |
 | --- | --- | --- |
 | `compatible-download`: Resolve permitted model revision, provenance, format, license and compatible runtime. Follow memory and storage guards, show the amount of memory needed if refused, and surface durable status for retry and existing supported cancellation. | local | not recorded |
-| `training-and-generation-quality`: An approved dataset and pinned model feed the available fine-tuning task profile. Record base, recipe, data hash, hardware, task and output artifact. Run evaluation against a fixed baseline and separate training, readiness and quality results. Include supported image generation and output import in scoped capability coverage. | local | not recorded |
+| `training-and-generation-quality`: An approved dataset and pinned model feed the available fine-tuning task profile. Record base, recipe, data hash, hardware, task and output artifact. Run evaluation against a fixed baseline and separate training, readiness and quality results. Include supported text generation and exact saved output review in scoped capability coverage. Image generation and image-output import remain pending in image-generation-and-output-import. | local | not recorded |
 | `model-runtime-hosts`: Exercise actual supported small model download on an authorized fixture, bounded local fine-tuning, generated output and task recovery, resource guard refusal and owned cleanup. Prove paired Desktop/browser status and revoke-gated reveals. Verify evaluation software with deterministic controlled metrics, including fixed-baseline calculation, result shape, lineage and current permissions. Model accuracy, real output-quality scoring and before/after model-quality measurements are excluded from this increment's tests. Document supported hardware profiles and unavailable methods instead of passing a stand-in. | controlled-environment | pending (review) |
 | `security-model-supply-and-limits`: Use existing host-managed providers, safe formats, integrity/allowlist controls and fail-closed executable model policy. Deny hidden new suppliers, unauthorized paid or external effects, unbounded resource reservations and unsafe retries. Keep tokens, protected sample data and raw worker output out of model tool responses. | local | not recorded |
 
@@ -543,6 +544,11 @@ Task counts show implementation tracking. Technical qualification remains separa
   - Original `model-runtime-hosts`: Exercise actual supported small model download on an authorized fixture, bounded local fine-tuning/evaluation, generated output and task recovery, resource guard refusal and owned cleanup. Prove paired Desktop/browser status and revoke-gated reveals. Document supported hardware profiles and unavailable methods instead of passing a stand-in.
   - Superseded requirements: Real model evaluation in the controlled Model host criterion.; Real model evaluation in the final Model host chunk and its actual-host completion test.; Real model quality measurements in the task-specific quality completion test.
   - Retained requirements: Actual authorized supported model download, pinned safe formats and provenance/license checks.; Actual bounded local fine-tuning, progress, checkpoints, private review and approved save.; Supported generation, output import, exact task/result history and recovery.; Evaluation software correctness with deterministic controlled metrics and fixed-baseline arithmetic, result shape, lineage and permissions; no model score is claimed.; Real Desktop/Managed status and separately approved revocable reveals.; Existing memory, storage, native ownership, time limits, cleanup and fail-closed controls.; Original actor, workspace, model, dataset and recipe permissions, current approvals and exact replay checks.; All security criteria, completed history and genuine non-quality technical gaps.; Fresh candidate-bound tests and separate review, all implementation chunks and final overall qualification.
+
+### Deferred technical work
+
+- The user has no image models installed and requests that all image-model work and qualification move to a late increment before final qualification. Continue increment7 text, model download, training, controlled evaluation software, both-host, resource, permission and cleanup checks. No image requirement is passed or removed.
+- Pending owner: `image-generation-and-output-import`. No test pass or completion is asserted.
 
 ### Verification
 
@@ -639,11 +645,54 @@ Disable new delegated lifecycle entry points and end their presentation. Retain 
 - Production/public deployment without an approved target and qualified release
 - Underlying shell, source execution, and any bypass of immutable release approval
 
-## Increment 10: Qualify coverage across the app
+## Increment 10: Generate images and import reviewed outputs
+
+- Id: `image-generation-and-output-import`
+- Status: `pending`
+- Dependencies: `models-training-and-generation`, `compose-build-test-publish`
+
+Let an authorized headless client generate an image with an explicitly selected supported local model, review the exact result and separately approve its import. Qualify real execution on both hosts when a compatible image model is available.
+
+### Stories
+
+- **Review the image model and task** (`review-image-model-and-task`): Bind an existing authorized saved Model and exact safe checkpoint bytes to supported runtime/settings and finite resource limits. Reuse the reviewed private preparation, approved-start fences and exact checkpoint resolver; require fresh current integration evidence.
+- **Generate and import images** (`generate-and-import-images`): Expose the existing image task through exact approved-plan tools. Keep transient prompts private, retain durable accepted task/result lineage, observe progress and current permissions, review the exact output and import only under separate current approval using existing image persistence owners.
+- **Qualify real image workflows** (`qualify-image-host-workflows`): Run a small predeclared real image task through an actual stdio MCP client and paired packaged Desktop and Managed browser. Verify real image bytes, exact review/import, failure/resource/revoke behavior and owned cleanup. Synthetic results cannot qualify real execution.
+
+### Deliverables
+
+- Approved image generation and separate exact-output import tool capabilities using existing application/runtime owners.
+- Paired Desktop and Managed browser status, review and revocable presentation for exact image tasks/results.
+- Current source-bound real image workflow and cleanup evidence, with unavailable hardware/models recorded honestly.
+
+### Acceptance criteria
+
+| Criterion | Qualification | Latest evidence |
+| --- | --- | --- |
+| `image-generation-and-import`: Select an exact saved supported image model, safe checkpoint identity/size/SHA256 and finite task settings. Start through the existing owner under current approval; record and observe exact task/result lineage without exposing prompts, local paths or raw worker output. Review the exact output and import it only with separate current approval. Preserve normal headed image workflows. | local | not recorded |
+| `image-runtime-hosts`: On both packaged Desktop and authenticated Managed browser, use an actual stdio MCP client and paired app views to run a predeclared small image task with an explicitly authorized compatible installed image model. Verify real image bytes and lineage, exact separately approved output import, progress, resource refusal, revoke-gated status/reveals, failure recovery and owned cleanup. Preserve all original safety limits. No stand-in or synthetic output qualifies actual image execution. Model accuracy and aesthetic-quality scoring are outside workflow qualification. | controlled-environment | not recorded |
+| `security-image-model-supply-and-limits`: Retain existing host providers, safe formats, integrity/allowlist checks, executable-model refusal, current actor/client/workspace/model authority and bounded resources. Deny hidden downloads/suppliers, paid/external effects, generic discovery fallback, stale permissions, unapproved output import and unsafe retries. Retain unknown prior owners/files and keep private prompts/tokens/raw worker output out of tool replies. | local | not recorded |
+
+### Verification
+
+- Run focused contract/application/adapter/host/UI tests for image admission, exact checkpoint resolution, durable accepted task custody and separately approved output import.
+- Run the actual supported image workflow on both hosts, including real bytes, current authority/revoke/resource failures and owned cleanup, before any criterion pass.
+- Reuse existing source work as scoped historical support only. No accepted text-model accuracy rerun or unapproved image-model download; retain pending evidence until an authorized model/profile is declared.
+
+### Rollback
+
+Disable delegated image tools/presentation while preserving headed functionality, accepted task custody, reviewed artifacts and all existing resource/security/cleanup controls.
+
+### Excluded
+
+- New arbitrary model loaders, provider/runtime engines or automatic supplier/model downloads.
+- Image aesthetics or model-quality scoring and automatic publication of generated images.
+
+## Increment 11: Qualify coverage across the app
 
 - Id: `workspace-controls-and-product-qualification`
 - Status: `pending`
-- Dependencies: `plan-from-written-request`, `data-acquisition-and-datasets`, `rag-and-context`, `models-training-and-generation`, `asset-selection-and-custom-creation`, `compose-build-test-publish`
+- Dependencies: `plan-from-written-request`, `data-acquisition-and-datasets`, `rag-and-context`, `models-training-and-generation`, `asset-selection-and-custom-creation`, `compose-build-test-publish`, `image-generation-and-output-import`
 
 Deliver consistent support, discovery and actionable handoffs across the major product areas on both hosts. Show users which work needs their input and prove the complete workflow with repeatable tests.
 

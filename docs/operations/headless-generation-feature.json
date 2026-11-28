@@ -118,5 +118,14 @@
         "correction": "Explicitly preserve original Model and task-tag array types in the hostile Proxy fixtures. Narrow adapter/test strict types passed after correction; all current checks still required."
       }
     }
+  },
+  "scope_deferral": {
+    "authority_ref": "user-defer-uninstalled-image-models-20261127",
+    "source_increment": "models-training-and-generation",
+    "recipient_increment": "image-generation-and-output-import",
+    "status": "pending-late-increment",
+    "summary": "The user has no image model installed and defers image generation and image-output import. Existing image source checks remain support only; genuine image execution, import and both-host qualification stay pending. Increment7 retains actual text/model/training/resource/permission/cleanup checks.",
+    "new_image_download_authorized": false,
+    "task_or_parent_qualified": false
   }
 }

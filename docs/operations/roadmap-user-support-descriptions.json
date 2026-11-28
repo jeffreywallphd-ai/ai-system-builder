@@ -1,1 +1,3050 @@
-{"schema_version":"roadmap-user-support-descriptions-v1","support":[{"kind":"support-scope","source_text_sha256":"c94669eb05f0d8d3c992d69a53fcfaaaf8139834b98a81c005b3ac83c73118a6","user_description":{"owner":"agent","sentences":["The shared contracts and MCP test launcher were repaired.","The focused tests passed for secure connections, request scope, and public replies."]}},{"kind":"support-limitation","source_text_sha256":"4ef02b6e691fff5653c7a487ab0c1a2f6cb0b5d088423eb6a139c7d9898bdada","user_description":{"owner":"agent","sentences":["The roadmap still needs the combined repository tests and independent review."]}},{"kind":"support-scope","source_text_sha256":"b0eedc867a27638a19616713ff4a5741d015b11921a0359e8010a74fa0dd5817","user_description":{"owner":"agent","sentences":["In the packaged Windows app, the user approved a plan that saves a selected CSV and creates a system.","The second step waited for the file save.","The client received the same save reference on retry.","Data showed one saved CSV with the expected contents."]}},{"kind":"support-limitation","source_text_sha256":"249fb69d04f157f57db5716b44c92c8b361db25ddc64e0dd202a689cfa558446","user_description":{"owner":"agent","sentences":["This result covers saving a selected local file on Desktop.","Managed browser import, provider sources, dataset review and exact app reveal still need evidence."]}},{"kind":"support-scope","source_text_sha256":"e56b4e31726a7bbcbbb5f7bf67738ea46bcddd7bcc9a394444eaee91b1413b7a","user_description":{"owner":"agent","sentences":["In the Managed browser, the user prepared one CSV for the configured chat client.","The client read the file type and size.","Cancel removed access to the preview.","The usual Add data action saved one copy."]}},{"kind":"support-limitation","source_text_sha256":"5b3b279780b2f6073e930bc7fb82f3eee269510cf99bd48f87bcd41f7c6ec29d","user_description":{"owner":"agent","sentences":["Saving through an approved Managed plan, importing provider sources, preparing datasets and opening them from chat still need evidence."]}},{"kind":"support-scope","source_text_sha256":"05d082c476168a2d795736fc630fef33d5d6f3fa7caeb4167a1f91b153f4e47a","user_description":{"owner":"agent","sentences":["Both Managed approval screens showed the selected file and permission to save it.","The user approved the plan in the app popup.","The client saved one CSV and received the same reference on retry.","The next step waited for the file save."]}},{"kind":"support-limitation","source_text_sha256":"5124908527675eeb0b10095ca15c29e7e9501241c406f5f23088766ff027a10f","user_description":{"owner":"agent","sentences":["Provider imports, dataset preparation and opening the exact dataset from chat still need evidence."]}},{"kind":"support-scope","source_text_sha256":"8994d1ea63008c7513f9925af790c4f324f2d92852c6a6ab11d04296a3ed5e15","user_description":{"owner":"agent","sentences":["In the database test, two imports of the same selected file returned the same saved source.","An error while saving the source details left no partial records.","The test used a simulated provider reply."]}},{"kind":"support-limitation","source_text_sha256":"1feb208b85115a47dad186a02fb89e6fc6539ebc3740921de1759c4a5fed0b1c","user_description":{"owner":"agent","sentences":["Provider imports from the chat client, dataset preparation and opening data from chat still need evidence."]}},{"kind":"support-scope","source_text_sha256":"af98873509205d23bfc11e72bf5aa29188d733c1546fdc89096ed3c58ab438e0","user_description":{"owner":"agent","sentences":["The Data panel test prepared one Parquet file for the selected chat client.","A paired-client test verified the file type and exact revision.","Tests refused access from another client and stopped preview after cancellation.","The packaged Windows app refused a preview for an unselected file."]}},{"kind":"support-limitation","source_text_sha256":"f0bd81f0d9c4afbc27073d8f1b1e9dd4c77dc6dfc4d822d8f91b1b06c4613613","user_description":{"owner":"agent","sentences":["Provider import after approval, Managed browser preview, dataset preparation and opening data from chat still need work."]}},{"kind":"support-scope","source_text_sha256":"f21d16ee24a71ae7c93bb994ff4dea7c2b940543d97b9e94c999d1132628b314","user_description":{"owner":"agent","sentences":["The Managed browser test prepared one Parquet file for the configured chat client.","The chat client read the exact revision and could no longer preview that file after cancellation.","The test used Chrome over local HTTPS, with PostgreSQL and a simulated repository listing."]}},{"kind":"support-limitation","source_text_sha256":"6b745d7d4b22dfd9a8662fdb2f2fa73052ccbed2a0aac0a79867c69ebb86aca0","user_description":{"owner":"agent","sentences":["Provider import after approval, dataset preparation and opening data from chat still need work."]}},{"kind":"support-scope","source_text_sha256":"e16077a4a4fcf241436d33fa1eb0775f0b9989e76cb6e278b4b6da31ee4fd726","user_description":{"owner":"agent","sentences":["The Data picker shows the license declared in the provider listing.","The open-license filters keep matching datasets and clear earlier file choices."]}},{"kind":"support-limitation","source_text_sha256":"1124ca7040258d36498f8a1494a7cb811f773e9141013f75363628f9451a534e","user_description":{"owner":"agent","sentences":["This test used a simulated listing.","Saved-revision license evidence and full Data journeys have separate checks."]}},{"kind":"support-scope","source_text_sha256":"bb168b501191bca2589057aa710d9e34b8acd73e84736d7cde9453aaada3c84f","user_description":{"owner":"agent","sentences":["The Desktop and Server tests saved the license codes for the exact imported revision.","An import can still finish when the license information is unavailable."]}},{"kind":"support-limitation","source_text_sha256":"7e6743378329cbbbdb35e4878feac573de04f1441eed62a9173aef742ebcdc42","user_description":{"owner":"agent","sentences":["The tests used a simulated provider.","Approving provider imports in chat and testing the full Data workflow still need work."]}},{"kind":"support-scope","source_text_sha256":"bfa79857b0fc5c0b119046571553ad48dc14479e70623383d0b7c59929bc4155","user_description":{"owner":"agent","sentences":["Add Data shows the saved license for each imported file.","A file can show an unknown license. Older imports remain readable."]}},{"kind":"support-limitation","source_text_sha256":"565d9c5555b19ab266a1dce7c3ff3f37a957e23540d9976f314b5a4736702a00","user_description":{"owner":"agent","sentences":["The tests used a simulated provider.","Approving provider imports in chat and testing the full Data workflow still need work."]}},{"kind":"support-scope","source_text_sha256":"50670b2338f7544a0b52266725df649858dbfa3f6eb4b3b7753403e66cefaa15","user_description":{"owner":"agent","sentences":["The selected source stays unchanged while the app checks it.","Tests cover expired or withdrawn access, uncertain replies and competing saves."]}},{"kind":"support-limitation","source_text_sha256":"6fc44e5dbf6c12a8a4067179bc83d4217f2658b54a635c9ec2e91ceccb6a898e","user_description":{"owner":"agent","sentences":["These tests use simulated provider replies.","The complete dataset and two-host Data takeover tests still need to run."]}},{"kind":"support-scope","source_text_sha256":"16bf2011f080489d32b33223f529b9c53bedf916ed49acc32af8a99d1385445a","user_description":{"owner":"agent","sentences":["The Desktop and Managed tests saved a provider file after exact plan approval.","Both approval screens explain the use of provider access.","Tests cover expired or withdrawn access, competing saves, failed commits and uncertain replies."]}},{"kind":"support-limitation","source_text_sha256":"9c212cd207dc50bfe5c51e4982ce04e669e99ec30be42c8b074eebc2de8e3229","user_description":{"owner":"agent","sentences":["The tests use simulated provider replies.","The complete Data workflow still needs live tests in both hosts."]}},{"kind":"support-scope","source_text_sha256":"ffd226c318b8fa63b81e1463ec6a8a6f9523e3caa4cacb162d521ff98ec7235f","user_description":{"owner":"agent","sentences":["Tests read task progress through the Desktop and Managed hosts, HTTP and the official chat client tools.","Only current plan-review clients with Data read permission can read the exact task.","Tests reject retired access, foreign tasks, private fields and inconsistent progress."]}},{"kind":"support-limitation","source_text_sha256":"fd25c04ba1e21a4ee997379ce55f82058cc4044c75ebad1a01c5fb8b5ec80861","user_description":{"owner":"agent","sentences":["The tests use isolated local hosts and synthetic records.","The complete Data workflow still needs live tests in both hosts."]}},{"kind":"support-scope","source_text_sha256":"6499e79acda51bfe2febad192bdb00f84f0f9626071319f4c3d3b20351e1f41f","user_description":{"owner":"agent","sentences":["Tests inspect up to sixteen exact saved dataset versions and compare two versions.","Tests cover the application, both hosts, HTTP and the official chat client tools.","The checks enforce read limits, current Data permission, privacy, input order and consistent split counts."]}},{"kind":"support-limitation","source_text_sha256":"fc0824f7b673be22aefabacc5276cd37b47a7b195ab12ff1890422b45ec305db","user_description":{"owner":"agent","sentences":["These tests inspect metadata from synthetic records.","Dataset preparation, the live Data workflow and overall roadmap qualification still need work."]}},{"kind":"support-scope","source_text_sha256":"46717c47bdf94b2adbd7bd185e9fcb7e4e04188fbab3b3a5635b90a14aab0978","user_description":{"owner":"agent","sentences":["Tests check exact completed local files, read limits, current Data permission and the dataset recipe.","They reject stale, foreign, duplicate and unsupported inputs.","The recipe maps to the existing dataset processor."]}},{"kind":"support-limitation","source_text_sha256":"5a00794771428e247061b52c28ff039d442ffa56888cf63911263c901a381311","user_description":{"owner":"agent","sentences":["These tests check saved file information only.","Reading file contents, processing datasets and reviewing results still need work."]}},{"kind":"support-scope","source_text_sha256":"01ca98116ce4ec62dca27c2bd2507abdf59ecbb62d87d29be3aa3ff1752be7a5","user_description":{"owner":"agent","sentences":["The Windows app and Managed browser tests previewed dataset settings after an approved local import.","The chat client reads the current file revision, recipe, split and limits.","Tests reject private command details and changed inputs.","The preview starts no processing."]}},{"kind":"support-limitation","source_text_sha256":"3493769d0f31a166260ceeae25640c584525149c4b22129c84aa42985a30e8a7","user_description":{"owner":"agent","sentences":["Dataset settings can be previewed.","Processing, result review, saving and opening the exact Data view from chat still need work.","Increment 5 remains in progress."]}},{"kind":"support-scope","source_text_sha256":"b8f759624bb24160a19ae8c88d7b4c6132b5fc7cc6053bd53fa72ef1765d2936","user_description":{"owner":"agent","sentences":["Sixteen focused tests check saved local file bytes, file limits and current permission before processing starts.","They check that an uncertain reply, shutdown or failed cleanup cannot start duplicate work or release protected temporary files."]}},{"kind":"support-limitation","source_text_sha256":"dbe1abd90a603047130b487276bf02935f5dcfdfac3fc3596a512bb4c813dc71","user_description":{"owner":"agent","sentences":["This reviewed change supplies the protected processing entry point.","Connecting approved plans, showing task status, reviewing and saving results, and opening the exact Data view remain separate work."]}},{"kind":"support-scope","source_text_sha256":"7bafd0882b8eeb5cd518b67db3a12ba4bcb6c40ac19a49c1f14cfb244581e9ce","user_description":{"owner":"agent","sentences":["The desktop app and browser passed approved dataset-processing tests.","The client can check status and recover a confirmed task without starting the same work twice."]}},{"kind":"support-limitation","source_text_sha256":"8a5f42ef9222cf960a846f9ce659e9239789e7b46fa15818554ca000f4cca29f","user_description":{"owner":"agent","sentences":["This completed change covers processing and task status.","Result review, saving and opening the exact Data view still need work.","It does not complete a roadmap criterion.","Earlier failed test runs remain in the evidence."]}},{"kind":"support-scope","source_text_sha256":"c745052f512a20e83c65c566cb55295fb9106d7b1666fa15fb7e24c590a0b058","user_description":{"owner":"agent","sentences":["The desktop app and browser passed the complete review and save journey for a small local dataset.","A separate approval saves one immutable version.","Repeating the same request returns the same saved result.","Tests verify the selected columns, quality results and version details."]}},{"kind":"support-limitation","source_text_sha256":"de905622f207b7f13e91a05ef05c8e3d9f9b63058e14e04a285e96c6b067731e","user_description":{"owner":"agent","sentences":["Provider tests use simulated replies.","The tested dataset uses saved local rows.","Preparing provider files, OCR and generated datasets are outside this completed change."]}},{"kind":"support-limitation","source_text_sha256":"8f99afcb76c247680f52f1d9c9f850ee1bb27d1ff0a4a6756df99bf9fc46d609","user_description":{"owner":"agent","sentences":["Opening Data work from chat is the next task.","Recovery after the host exits and separate native checks still need work.","The parent roadmap criteria are still pending.","Earlier failed runs remain in the evidence."]}},{"kind":"support-scope","source_text_sha256":"265c13bb980237b0d562128320cc9c6f121de18585b6c713fed4f57e46470415","user_description":{"owner":"agent","sentences":["The desktop app and browser can show the exact saved source, dataset version or accepted task after separate window consent.","Taking back control stops new display and context access.","Saved data and independent tasks remain available."]}},{"kind":"support-limitation","source_text_sha256":"7e3325ba24184627f8d37f43c915c4a1331eea43e40b96466a1fc72fda52f6bb","user_description":{"owner":"agent","sentences":["This change covers the three Data display actions.","Other processing modes, recovery after host exit and native checks are outside this change."]}},{"kind":"support-limitation","source_text_sha256":"0b088bf1d27627328fae3e84c8f6634460d7b92b027f4af98c36e27b3009d2c6","user_description":{"owner":"agent","sentences":["The parent increment still needs its own focused acceptance.","Combined testing follows after all roadmap increments are implemented.","Earlier failed runs remain in the evidence."]}},{"kind":"support-scope","source_text_sha256":"12af07a4a533ce40e2602b9e06d54de85f346d174172a2ae192e6388a9af01f5","user_description":{"owner":"agent","sentences":["Both app test journeys previewed exact saved files and dataset versions.","The preview reports model records and settings without starting processing or sharing source text.","Current access checks and private-field rejection passed."]}},{"kind":"support-limitation","source_text_sha256":"d4072072ece609f9e0076b2542ee18360f10e25dbe76f175ab53359d937f2bef","user_description":{"owner":"agent","sentences":["The preview is complete, but model and runtime availability are not checked.","The agent still needs to finish approved Context processing, queries and result display.","No action needed from you."]}},{"kind":"support-limitation","source_text_sha256":"cebbf1f5e88c337080c84e89c9cda0715b4c02cbf633f066b12711f5f0ef0dc0","user_description":{"owner":"agent","sentences":["Completed model accuracy tests stay closed.","Native recovery and combined final tests remain separate checks."]}},{"kind":"support-scope","source_text_sha256":"bc3f8aa7d968cfb189841afa2c4b64f714c8497ae850d01f211539d8aa1d6c41","user_description":{"owner":"agent","sentences":["The internal Context start and cleanup checks passed.","They checked exact source files, task identity and safe handling of uncertain replies.","The runtime replies were simulated."]}},{"kind":"support-limitation","source_text_sha256":"2f952417ca4945d3cc61ae08c916906e5b59df99744decf346e37b5a1462bd81","user_description":{"owner":"agent","sentences":["No action needed.","The agent still needs to connect approved Context actions to both app hosts and test real Context work.","These component checks do not complete the roadmap increment."]}},{"kind":"support-limitation","source_text_sha256":"fc817f9da80dc1432e5884d6bc4f61699b04472289b2aa0c4a45aef6defb77a7","user_description":{"owner":"agent","sentences":["No action needed.","Completed model accuracy tests remain closed.","Native recovery, host-exit checks and final combined testing have separate requirements."]}},{"kind":"support-scope","source_text_sha256":"fd41d655419ef41c7acb3d34cfffa6a4e00fd95be4d8cb307d4dd8748444d8f5","user_description":{"owner":"agent","sentences":["The internal installed-only runtime checks passed.","They checked copied inputs, exact task replies and safe handling of refused or uncertain starts.","Related startup and model-download compatibility tests also passed."]}},{"kind":"support-limitation","source_text_sha256":"ddfad58456ca76218d404fd13f46d516456b0d83bae7591e3e672d82f93e066b","user_description":{"owner":"agent","sentences":["No action needed.","The agent still needs to connect approved Context plans to the app and test real Context work.","These component results do not complete the roadmap increment."]}},{"kind":"support-limitation","source_text_sha256":"1e9d5eadb4390fcd18de40d91220ae09ddb17b652f6a8d639e791e3960cfa67f","user_description":{"owner":"agent","sentences":["No action needed.","The worker and process replies in these checks were simulated.","Earlier failures are retained, and physical recovery and final combined tests have separate requirements."]}},{"kind":"support-scope","source_text_sha256":"262da9bab3dc2b726054fe841d20918a29d204e5c4300888656a239cc449ae91","user_description":{"owner":"agent","sentences":["The installed-only Context host checks passed at the previous committed checkpoint.","They checked safe worker recovery and one-use start permission in both hosts.","Related compatibility and build checks also passed."]}},{"kind":"support-limitation","source_text_sha256":"1bad3a9d65785037ca9f61e74c51ddf2474ce08396556b939e2deabab39b8bbc","user_description":{"owner":"agent","sentences":["No action needed.","The agent still needs to qualify the new public Context plan connection and complete the remaining Context features.","These earlier component results do not complete an increment or work chunk."]}},{"kind":"support-limitation","source_text_sha256":"0dce193c8ef0895b76386c7ce5e65511243c2cbfb446cc3588c924f1b262fab6","user_description":{"owner":"agent","sentences":["No action needed.","These component checks used simulated worker and process replies.","Physical recovery and model checks remain separate; completed model accuracy checks were not repeated."]}},{"kind":"support-limitation","source_text_sha256":"b430bed43f0b57d2c84a26bf4a46d39d9ecf381d0c86e259451beb0108b604d5","user_description":{"owner":"agent","sentences":["No action needed.","The agent still needs to finish the remaining Context actions and qualify RAG model use.","These results do not complete the roadmap increment or its work chunks."]}},{"kind":"support-limitation","source_text_sha256":"8548078758a0e9662d0cf0c15cd9a82b3021a272d9de5fd0e5f280d6a5487981","user_description":{"owner":"agent","sentences":["The app journeys used files with unknown license terms.","Separate worker and host component tests checked known terms.","These checks do not measure model accuracy."]}},{"kind":"support-scope","source_text_sha256":"b3d5c3de32960a06b3a33f0d327aaa3dd1ca22f298934e53c88b5f449be9e025","user_description":{"owner":"agent","sentences":["The Context pack workflow passed automated checks in the desktop and browser apps.","The checks covered approval, source records, saved license terms and duplicate-run protection.","The result still needs a separate save action."]}},{"kind":"support-scope","source_text_sha256":"f40c501ad91ef7dcec389ded1eaedc85c78181f6b16ace812fff463377ee6c6b","user_description":{"owner":"agent","sentences":["The installed-model safeguards passed their focused tests and a separate review.","The checks bind the saved model to existing local safe-weight files and keep private model paths out of public results.","The tested work is committed."]}},{"kind":"support-limitation","source_text_sha256":"05ca5985ebff044ef9560005599b100b8670ed82204556f9e1ec582d3315336e","user_description":{"owner":"agent","sentences":["No action needed.","The agent still needs to finish the public RAG workflow and the remaining Context features.","These component results do not complete an increment or work chunk."]}},{"kind":"support-limitation","source_text_sha256":"2f10a2cd94ddda1e0ca642668647e5407f6372d329cca9a59b0027319224f9d5","user_description":{"owner":"agent","sentences":["The model replies in these tests were simulated.","Real archive and storage operations were tested.","Physical model, resource and recovery checks remain separate, and earlier failures are preserved."]}},{"kind":"support-scope","source_text_sha256":"d80d30a63812109090953275e9c35aaf9e1c04a17b38e9e77434416c76c91d8a","user_description":{"owner":"agent","sentences":["The local RAG plan connection passed its focused checks and a separate review.","Both approval screens disclose the selected model and keep saving separate.","The tested work is committed."]}},{"kind":"support-limitation","source_text_sha256":"db51b327e40a911e436431cbceb216c08c44efed92e7eac7d76bf7ffa0b54737","user_description":{"owner":"agent","sentences":["No action needed.","The agent still needs to finish the remaining Context workflow and qualification.","These component results do not complete the increment or its work chunks."]}},{"kind":"support-limitation","source_text_sha256":"cd402808cf46b1133e30cfdde6ec1c5609ed83e667d06a2b9650b25514ded4c7","user_description":{"owner":"agent","sentences":["This support records tested component behavior and its limits.","The remaining workflow needs its own current checks and review."]}},{"kind":"support-scope","source_text_sha256":"b2c164a25d943016204f335636443ea918e6c1eb14dcd71a79ee9563e5eca79e","user_description":{"owner":"agent","sentences":["The protected Context byte-storage component passed its focused tests and a separate review.","Existing file ingestion remained compatible.","The tested work is committed."]}},{"kind":"support-limitation","source_text_sha256":"3c3285c0066d6c3db63d62b076b8e85b9283fdb54d05fd23b27c575f609cb0a2","user_description":{"owner":"agent","sentences":["No action needed.","The agent still needs to finish the remaining Context workflow and qualification.","These component results do not complete the increment or its work chunks."]}},{"kind":"support-limitation","source_text_sha256":"2f7b8c332b448c03567829fbe881feda446ec76b758f1bed3e1138c19be2f4d8","user_description":{"owner":"agent","sentences":["This support records tested component behavior and its limits.","The remaining workflow needs its own current checks and review."]}},{"kind":"support-scope","source_text_sha256":"988a9ac545ee170a570159b25ce868df3c872ae02a71c0d1286612fd7a28308b","user_description":{"owner":"agent","sentences":["The internal reviewed Context save passed its focused checks and a separate review.","The tested work is committed.","The database field-order defect was fixed and earlier failures are preserved."]}},{"kind":"support-limitation","source_text_sha256":"f11f8ed62142a923e3d44ad075e144091e43ac036a959810d380d295ee430625","user_description":{"owner":"agent","sentences":["No action needed.","The agent still needs to finish the public Context workflow and its qualification.","These internal results do not complete the increment or its work chunks."]}},{"kind":"support-limitation","source_text_sha256":"f79b75126606372ee349e74d049f3c13c2b273d2fc0b055cf2b0a9bff55f0b0e","user_description":{"owner":"agent","sentences":["These tests used controlled local data and simulated runtime replies.","Physical database, model, resource and recovery checks need their own evidence.","Previously accepted model accuracy checks were not repeated."]}},{"kind":"support-scope","source_text_sha256":"0968c9ae9a2d0eebbb3fe9a4d4bc9359fb1892eb7aeef94319bd6aba2fc27d08","user_description":{"owner":"agent","sentences":["The approved Context save workflow passed its focused checks and a separate review.","Both app connections can save the exact reviewed result and read its saved metadata.","The tested work is committed."]}},{"kind":"support-limitation","source_text_sha256":"dfaacb4f6de02ab8e2b7b83a7b3bcf5a76c9819b61566957d531252274012fb7","user_description":{"owner":"agent","sentences":["No action needed.","The agent still needs to finish Context queries, rebuilding, display and their qualification.","These component results do not complete the increment or its work chunks."]}},{"kind":"support-limitation","source_text_sha256":"9645969cf2d8456c21683b87b4f3c828729b4cf7b5aba465e46eddfed6dbb99f","user_description":{"owner":"agent","sentences":["These tests used controlled local data and simulated runtime replies.","Actual host, model, retrieval and recovery checks need their own evidence.","Previously accepted model accuracy checks were not repeated."]}},{"kind":"support-scope","source_text_sha256":"8fea94ee559563969b6911017160ad614f3a8dce6a028750804e7d946e69df7b","user_description":{"owner":"agent","sentences":["Automatic checks, Desktop type checks and the Server build passed.","The app can prove when no task started and record that result once.","Both connections preserve that result on a retry without starting again.","The reviewed work is committed."]}},{"kind":"support-limitation","source_text_sha256":"84968420c920fb46f5927d71f6437f144b9ec0b8bc2bebf53144e718f50fd278","user_description":{"owner":"agent","sentences":["A failure to start does not prove a running task, saved result or successful model, retrieval, runtime or native work.","Uncertain replies keep their existing safeguards.","This component does not complete parent criteria or work chunks."]}},{"kind":"support-limitation","source_text_sha256":"188d458c1bd8993192b11e3de79cc3b07d5ecdfe88aea670fbe7141d8dd5bbf4","user_description":{"owner":"agent","sentences":["These Core and connector tests used controlled data.","Actual model, runtime, UI, PostgreSQL and whole-roadmap qualification remain separate.","Earlier failures stay in history.","The checks neither adopt old tasks nor allow them to run again."]}},{"kind":"support-scope","source_text_sha256":"53aef3a7205af93f952e96b3d6678e03d1fbb86f81f1453e851769757e328de6","user_description":{"owner":"agent","sentences":["Automatic Context checks, Desktop type checks and the Server build passed.","The app hashes and writes the same private input copy.","It keeps files when worker replies are uncertain and retries failed cleanup through the existing task owner.","The reviewed work is committed."]}},{"kind":"support-limitation","source_text_sha256":"4dbce5b183b441105a4228633cc8acad3569509601913f06032accc24d0e06ab","user_description":{"owner":"agent","sentences":["No action needed.","The agent still needs to connect and qualify headless querying, rebuilding and display.","This component does not supply physical retrieval, resource, worker-stop, native, PostgreSQL or real-app evidence.","It does not complete parent criteria or work chunks."]}},{"kind":"support-limitation","source_text_sha256":"7536f711cd9fb152efc22c2a22b3cca128566f16e894973ad9c9ce2460d40bf0","user_description":{"owner":"agent","sentences":["The tests used small synthetic files, simulated worker replies, real local staging and the existing task owner.","They covered cleanup failures and did not discover or alter old directories.","Previously accepted model accuracy tests were not repeated."]}},{"kind":"support-scope","source_text_sha256":"d4a88e1678c05cfe741dc14c321be7d1829b5435f2b91f4a41aaeefc345df092","user_description":{"owner":"agent","sentences":["Fifteen automatic check groups, Desktop type checks and the Server build passed.","The agent can read verified original Context sources and settings with current permission.","Both connections return bounded metadata without opening source bytes or a runtime.","Independent review accepted all four component checks, and the work is committed."]}},{"kind":"support-limitation","source_text_sha256":"93925144efc6d6ce5bee4fd23c91f41fe26221f22aefdfd26333fc6d7aa86f85","user_description":{"owner":"agent","sentences":["No action needed.","This metadata component grants no new run, old task, source-byte, installation, query or window permission.","Rebuild execution and actual retrieval, resource, runtime, native, PostgreSQL and real-app checks need separate evidence.","This component does not complete parent criteria or work chunks."]}},{"kind":"support-limitation","source_text_sha256":"ece9c529c8c3f7e74c0bfb04b5c0fdf4fc9d9f6a6acd497b3ca6829864ad9738","user_description":{"owner":"agent","sentences":["Earlier failures remain in history, and the earlier work record stays unfinished.","The corrected input and tool-list checks passed.","Original test definitions, recorded pins and pending qualification remain.","The whole-software suite and accepted Qwen accuracy checks were not repeated."]}},{"kind":"support-scope","source_text_sha256":"5fec2113b78aa4510f0d036abd9c7e825279eb29b369c116999c749a32380739","user_description":{"owner":"agent","sentences":["Nine automatic check groups, the Desktop type check, and the Server and Thin Client builds passed.","A new approval binds a saved Context to its original sources, settings and model.","Both connections tested one run, exact retry, separate review and save, parent preservation and parent loss after staging.","Independent review accepted all three component checks, and the work is committed."]}},{"kind":"support-limitation","source_text_sha256":"456fc33448ecdbf3c6e390d025964303cc1c2ccd2883fc2ace1a9b5177e3bcfa","user_description":{"owner":"agent","sentences":["No action needed.","This component does not connect queries or revocable display.","Actual model, retrieval, resource, native, PostgreSQL and real-app checks need separate evidence.","Saving a new result requires its own approval.","Parent criteria and the build, query and display work chunks remain open until their own work and checks pass."]}},{"kind":"support-limitation","source_text_sha256":"30f5d942437cc49a0201b50c0dec8e9af83c5963e40baed80934af5dc782a4be","user_description":{"owner":"agent","sentences":["The tests used the real Context owner, SQLite, connectors and approval controls with synthetic bytes and simulated runtime replies.","The earlier sandbox denial and stale guidance failure remain in history.","The permitted host fixture and corrected checks passed.","Accepted Qwen accuracy checks and the whole-software suite were not repeated."]}},{"kind":"support-scope","source_text_sha256":"f49985f299fb1c05bb6a64740bd44d4aace104634f7bb5bc9a9782400f9f29db","user_description":{"owner":"agent","sentences":["Nine automatic check groups, the Desktop type check and the Server build passed for private Context query support.","Forty adapter tests and synthetic worker checks passed.","The tests check permission changes, resource limits, exact model and data selection, safe cleanup and copied citations.","Independent review accepted all four component checks, and the work is committed."]}},{"kind":"support-limitation","source_text_sha256":"baaa7b46c764ddce3a329d0a4f1abec5cf0eb902dbe4a40cf8e4bf8bc8b3daca","user_description":{"owner":"agent","sentences":["No action needed.","This private component does not connect public queries or permit sharing source or query results.","Actual retrieval, resource, native, PostgreSQL and real-app checks need separate evidence.","Parent criteria and the build, query and display work chunks remain open until their own work and checks pass."]}},{"kind":"support-limitation","source_text_sha256":"e654c31a99b25eeae2c3189cc39fcb7f9f81e79196ed523effa4b1f20e3361a6","user_description":{"owner":"agent","sentences":["The earlier pass remains in history and predates the citation fix.","The final receipt includes the fix.","Existing ordinary queries, model loading and cleanup controls remain in place.","No model download, accepted Qwen accuracy rerun or whole-software suite was performed."]}},{"kind":"support-scope","source_text_sha256":"2bcbbbb177b56197ee89c57bbfe1aec4c5b966043df1f2dd695405de252664b1","user_description":{"owner":"agent","sentences":["Nine automatic check groups, the Desktop type check and the Server and Thin Client builds passed for Context display.","The app checks exact saved references and accepted task ownership before showing fixed details.","The tests cover current read permission, separate window consent, replay and revoke.","Independent review accepted all four component checks, and the work is committed."]}},{"kind":"support-limitation","source_text_sha256":"441a045eaf24cda09ee2a42c35d78c4e48726878d0db140c96b5a480cbf33831","user_description":{"owner":"agent","sentences":["No action needed.","This component does not connect public queries or query summaries.","The tests use controlled structured records, delivery and UI fixtures.","Actual retrieval, resource, native, PostgreSQL and real-app checks need separate evidence.","Parent criteria and the build, query and display work chunks remain open until their own work and checks pass."]}},{"kind":"support-limitation","source_text_sha256":"ac4a07300ab3234242150f84b5694df712c92f54b03cb95e2bd06b7d2cfbcb48","user_description":{"owner":"agent","sentences":["The host wiring check reads source code and opens no app.","Display cannot create the Context feature or approve a new task or save.","Checking an accepted task can validate its output and recover its existing worker under the original task controls.","Existing window consent stays separate.","Accepted Qwen accuracy checks and the whole-software suite were not repeated."]}},{"kind":"support-scope","source_text_sha256":"d18e1d10b4eac2acd0d7b8461ea2c359deadc6c7469e9327c21497eb91ac56bc","user_description":{"owner":"agent","sentences":["Fifteen automatic check groups, the Desktop type check and Server and Thin Client builds passed for question preparation.","Both hosts check the exact saved Context and original source and model records.","The client and server check that the returned hash matches the question.","Independent review accepted all four component checks, and the work is committed."]}},{"kind":"support-limitation","source_text_sha256":"bfcedd3bee263b343126851f3a45d18b708876a09127c99d8e94311197e4f903","user_description":{"owner":"agent","sentences":["No action needed.","This component prepares a question hash and saved metadata.","Public query execution, query-summary display and actual retrieval and resource checks still need work.","Controlled tests and updated test definitions do not complete actual app, native or parent checks."]}},{"kind":"support-limitation","source_text_sha256":"42f8e1062f430fa3b00707fa8ff92313e5b6fdd4baa304f47139b9076251438c","user_description":{"owner":"agent","sentences":["The application hashes the copied question before it reads metadata.","The metadata reader receives no question text.","Transport request buffers keep their existing bounded lifetime; this does not promise forensic erasure.","Existing limits and failed test history stay intact.","Accepted model accuracy checks and whole-software testing were not repeated."]}},{"kind":"support-scope","source_text_sha256":"fac6b143c1a691a901e929259d7eeb0c5621737b268cbac34d2eb77746c6ec9e","user_description":{"owner":"agent","sentences":["Seven focused check groups and the Desktop and Server checks passed for the private query owner.","Tests checked exact task acceptance, source-linked numeric results, access boundaries and cleanup accounting.","Tests also used real local files and an isolated SQLite database.","An independent review accepted the component before it was committed."]}},{"kind":"support-limitation","source_text_sha256":"0786677388e491b14b210cb42d4e4ac58a7f58fcd23da4750c21597fab86f3c2","user_description":{"owner":"agent","sentences":["This component alone provides no public query or window display.","Controlled tests do not prove physical model, resource, real-app or native behavior.","The parent criteria and work chunks remain open until their own work and checks pass."]}},{"kind":"support-limitation","source_text_sha256":"d59982a7e71a92f4e83eb9ee983383e36f806b3624cc47f7683ca70b09cfb57e","user_description":{"owner":"agent","sentences":["The existing model resolver, task owner and cleanup controls stay in place.","Tests check optional metadata compatibility, current permission and cleanup callbacks.","Earlier failures remain in history.","No model accuracy or whole-software tests were repeated."]}},{"kind":"support-scope","source_text_sha256":"7b4acbe38ded4d7e9bc37531e27b6715ed83ea664578f3c0d716c7d07d60b580","user_description":{"owner":"agent","sentences":["Seventeen focused check groups and the Desktop, Server and Thin Client checks passed for approved Context queries.","Both composed hosts tested one exact query, accepted-task ownership, replay and denial after source or model permission changes.","API, SDK and approval controls use the same exact question hash and limits.","An independent review accepted the component before it was committed."]}},{"kind":"support-limitation","source_text_sha256":"fa0c8d974fa803e182d58e91d0904b8ea55bcbcf9b8d4e52d4f1161f742392d9","user_description":{"owner":"agent","sentences":["Task results contain citation metadata and do not download a model.","This component alone does not provide query display under window consent.","Controlled feature tests do not prove physical model, resource, native or real-app behavior.","The parent criteria and chunks stay open until their own work and checks pass."]}},{"kind":"support-limitation","source_text_sha256":"31c75371c276d647970f3e1402768e73e988d05cfc2d96dbb7f9f3c0039f1756","user_description":{"owner":"agent","sentences":["Earlier test results remain in history.","The final receipt covers the corrected source and documentation.","Tests check missing definitions, accepted work after its original request ends, and current model access before results leave the host.","No accepted model accuracy or whole-software tests were repeated."]}},{"kind":"support-scope","source_text_sha256":"a6a7e9c472a7b18127ad2f0b772f3b0edba8d7f005b94fceee675f6878d29b4e","user_description":{"owner":"agent","sentences":["Eleven focused check groups and the Desktop, Server and Thin Client checks passed for showing a Context search summary.","Controlled host tests check current access, saved task identity and cached results.","UI and SDK tests check approval, replay and revocation.","An independent review accepted the component before commit."]}},{"kind":"support-limitation","source_text_sha256":"9850e5da580087793eb7f490c4a2781ffecaf782b3027d661388899005d94303","user_description":{"owner":"agent","sentences":["These controlled tests support the query display feature.","They do not prove physical model, memory, real-app or native offload behavior.","The parent criteria and work chunks remain open until their own checks pass."]}},{"kind":"support-limitation","source_text_sha256":"a6ec9ac942d04fc5a10e918204afd200ff65c2b5c91f3bf0012c91555c7a345f","user_description":{"owner":"agent","sentences":["Window approval only permits the supported display.","It does not permit a new query, model load, save, source-text sharing or use of another task.","Earlier results and pending checks remain in place."]}},{"kind":"support-scope","source_text_sha256":"bdd6c336ec7ca1d7cb27db4f6dbefc86b20816bd4878ebd71f39b7cfac1bb774","user_description":{"owner":"agent","sentences":["Seven worker runs completed with the installed model.","All six query groups reached100% recall on the eight fixed topics and stayed within the recorded resource limits.","Four result comparisons matched exactly.","Workers exited and generated test inputs were removed.","An independent review checked saved outputs without rerunning the model."]}},{"kind":"support-limitation","source_text_sha256":"0c6598ec1104bce0f93465b0736ef6ca09d980433a023995bcd9768e971bd368","user_description":{"owner":"agent","sentences":["These measurements cover the ordinary retrieval worker.","The full Headless approval path and real app, MCP and UI journeys still need testing.","Physical failure and replay checks and parent qualification remain pending."]}},{"kind":"support-limitation","source_text_sha256":"27f9776bc5e9f76ce22be73969a1ed39d1df349b2ade17fbeaff6707cc8736a4","user_description":{"owner":"agent","sentences":["RAM sampling starts after shared imports.","The GPU value counts Torch allocations after startup, not all GPU memory used by the process or device.","Eight samples do not prove statistical speed or broad model accuracy."]}},{"kind":"support-limitation","source_text_sha256":"ca0f328c62d8047394c1293836f8bf63a204fe43c5af1c228434b0c641cb18fa","user_description":{"owner":"agent","sentences":["The existing worker supervisor was reused.","The CUDA comparison uses the current embedding runtime on both sides.","No model, dependency, memory guard, offload policy or earlier result changed.","These observations do not close the parent roadmap."]}},{"kind":"support-scope","source_text_sha256":"6db3b787040c4cca1eca06455237a24fc812710ab2e2a0882a2b8f1c8df02493","user_description":{"owner":"agent","sentences":["Five fixed CPU and GPU query checks passed with the installed MiniLM model.","The checks met the retrieval, exact-result, memory and denial targets.","All six owned processes stopped, and temporary copies were removed.","Independent review accepted the component, which is committed."]}},{"kind":"support-limitation","source_text_sha256":"ef562b5005e2cf1ed2a5bb471889793d59f8c9c86355bda8d42b3edc53d6191d","user_description":{"owner":"agent","sentences":["No action needed.","The real Desktop and Managed app journeys and the physical failure and replay checks still need qualification.","These worker results do not complete the parent increment or final roadmap testing.","Earlier failed results stay recorded."]}},{"kind":"support-limitation","source_text_sha256":"79b91c3d44d7ca952a11aa276214363cbd24ae56a008e877e4f21cdc25df6a32","user_description":{"owner":"agent","sentences":["Accepted model accuracy checks and whole-software testing were not repeated.","The GPU measurement covers the declared Torch query allocation.","Cleanup affected only verified files and processes from this test.","Older staging and offload files remain unchanged."]}},{"kind":"support-scope","source_text_sha256":"76fa9ee5328514114cdda1a1a4becdfc09a484544b2a49bbafdb0b51065af5e2","user_description":{"owner":"agent","sentences":["The Desktop Context workflow passed its feature checks and independent review.","Users can build, save, search, rebuild and display the tested Context results.","The completed component is committed."]}},{"kind":"support-limitation","source_text_sha256":"9b583cac38f778c81c61fd612c05c2217afe65dc3418796c2586fc70e139eaf9","user_description":{"owner":"agent","sentences":["No action needed.","The current two-question checks for both interfaces and the physical failure tests are separate work.","The earlier Desktop component does not close the parent increment or final roadmap testing."]}},{"kind":"support-limitation","source_text_sha256":"6a4d5405e2e8ec85689cc6b2b0a59739be8b9b0ac3791dd5fadc27cd53c04c25","user_description":{"owner":"agent","sentences":["Earlier failures stay recorded.","Accepted model accuracy and whole-software tests were not repeated.","Production safety limits and older staging files are unchanged."]}},{"kind":"support-scope","source_text_sha256":"35bfe4d3d5a51dae923e84e52cec30d7e280ea73d97edd3269a5028753bf1c53","user_description":{"owner":"agent","sentences":["No action needed.","Both real app interfaces passed the shared Context feature tests.","The agent checked17test groups and a separate review.","This covers saved Context, grounded searches, approvals, replay, display and shutdown."]}},{"kind":"support-limitation","source_text_sha256":"c6a5bd1dd1b083c3121e5656506ae38e5522c038d4a3ed99a6f7b29329fd3394","user_description":{"owner":"agent","sentences":["No action needed.","Default Desktop startup and failed-build recovery need separate tests.","This component does not close the increment or the roadmap."]}},{"kind":"support-limitation","source_text_sha256":"1a607a6b587257e37233bfb975a9f76b1e77e7fca2857a44209c698f17fa801b","user_description":{"owner":"agent","sentences":["Desktop tests observed native worker handles.","Server tests confirmed the expected worker relationship and its later absence.","These are different forms of evidence.","Earlier failures and uncertain exits stay recorded."]}},{"kind":"support-scope","source_text_sha256":"55217348b0fbe73a27d2afae666e245e9ca3bf28ae4868903c947bb7dfb490e3","user_description":{"owner":"agent","sentences":["No action needed.","The agent fixed local runtime startup.","Both app interfaces passed real Context workflows.","The checks cover worker ownership, connection settings, response handling and shutdown."]}},{"kind":"support-limitation","source_text_sha256":"0d7204b6681cf7988ba1b3120d3a5d5a13f02ab2811139e3b1f45fa19f13e8d5","user_description":{"owner":"agent","sentences":["No action needed.","The failed-build tests and final roadmap checks need separate evidence.","Earlier failures stay recorded."]}},{"kind":"support-limitation","source_text_sha256":"2f468cc515c53ac5a9e3ba5e4b96b9763c565996222b6b25a8f8701000ecb39c","user_description":{"owner":"agent","sentences":["These are startup checks.","They do not prove a connection is safe after a worker stops before the app notices.","Desktop and server shutdown checks use different forms of evidence.","Other unfinished memory and shutdown work stays separate."]}},{"kind":"support-scope","source_text_sha256":"dd621c0b0c8d0f33fbd2e5cf0eb5bfe4329c83cd01f1533b84274d45b78ac15b","user_description":{"owner":"agent","sentences":["The training test now accepts the empty output folder created by the app.","Regression checks use the real training workflow and runtime adapter with synthetic storage and a task that does not train a model.","All 81 focused worker tests and related helper and documentation checks passed.","Another agent reviewed the fix before commit b9185e73b."]}},{"kind":"support-limitation","source_text_sha256":"e9fa9d7f4ac45ea411d5d4710ca1bc839931dce13753c0433ea4d53631094368","user_description":{"owner":"agent","sentences":["This checks the test code.","It does not prove that model training finished or that Headless training is ready."]}},{"kind":"support-limitation","source_text_sha256":"d4d7c2dc7ca9dc34583bb0ae0bcaac120c3339782a1141b84dcce0fe20b87b22","user_description":{"owner":"agent","sentences":["Both failed app tests and their shutdown records remain.","The agent must still run the app and host checks.","These results do not complete a work chunk, criterion or roadmap."]}},{"kind":"support-limitation","source_text_sha256":"0d22e0aeb1f6260c08e43a223e934b1118a6c8e90473f23f0170a4524e769aeb","user_description":{"owner":"agent","sentences":["These references name completed local work at its recorded source version.","Another checkout may not have those records. Missing records do not count as passed checks.","The accepted model accuracy tests were not run again."]}},{"kind":"support-scope","source_text_sha256":"a5b61148487b57b822d571e23c33ed34813a9b301dc4722fe802274cdf1aac39","user_description":{"owner":"agent","sentences":["Task information now comes from the existing Model service.","The tests checked permission changes, stopped hosts and saved task results.","These code tests do not qualify a running app."]}},{"kind":"support-scope","source_text_sha256":"f6f273e80b23218f6d3d3fd2607ab8ed2b90e652d555cd2ebcd6cba6bcca078e","user_description":{"owner":"agent","sentences":["Both apps now use the original Model service to read task information.","Reading a task does not start a model or a runtime.","The agent must still check the complete workflow in the running apps."]}},{"kind":"support-scope","source_text_sha256":"34d32155f49deeb327f2b6727d93f6227f38368524cc712db8159de567926bc1","user_description":{"owner":"agent","sentences":["The safety checks allow one separately approved Desktop training test.","They check the earlier failed test and confirmed shutdown first.","These code checks did not run the app test."]}},{"kind":"support-scope","source_text_sha256":"8241e59887a6837d0dd4276d76543ef137c177e1342b541cff85a319928ae788","user_description":{"owner":"agent","sentences":["A separate safety check allows one build of the corrected offline app package.","It cannot start a model or use the training-test allowance.","These code checks did not build an app package."]}},{"kind":"support-scope","source_text_sha256":"c7d49ea2d44c7ebf95ca628956859e2a0eda0828aa0ff76149a11f5b0bfbfe3c","user_description":{"owner":"agent","sentences":["The Tiny Desktop test now has model-quality comparison turned off.","Focused code tests and an independent review passed before the change was committed.","No model was loaded or scored."]}},{"kind":"support-limitation","source_text_sha256":"b9064b8198e808f5908e038ae819b1fc7fec7cd4739eecfc1290b590661dd71f","user_description":{"owner":"agent","sentences":["These results support the code at its recorded version.","They do not complete a roadmap work chunk, criterion or running-app test."]}},{"kind":"support-limitation","source_text_sha256":"8365ede369cac677b66956ee3145d19c33c25106a08a030b0a8a53731ba7da1d","user_description":{"owner":"agent","sentences":["These checks did not test model quality or accuracy.","The optional software evaluation feature stays separate."]}},{"kind":"support-limitation","source_text_sha256":"8e9dc59e2b526f75e1aa4e9a94d0bd58df496ac8303f3be778bffe4b45a171a3","user_description":{"owner":"agent","sentences":["Earlier failed tests and stop records are preserved.","This progress entry gives no permission to build, run a model, start an app or publish anything."]}},{"kind":"support-limitation","source_text_sha256":"10c29ad04f6cadc779bcd94e0c040ae3df80682460dc2c94346fd05bce0991a1","user_description":{"owner":"agent","sentences":["Another checkout may not have these local records.","A missing record does not count as a passed test.","This entry does not qualify the current software or complete its roadmap."]}},{"kind":"support-scope","source_text_sha256":"fa2eb29b6d789fa35a43fcc7919ca633c8a37cc329b087d9d34e4ab8763f48f8","user_description":{"owner":"agent","sentences":["The reviewed Desktop package was built successfully. Its files and all owned build-process shutdown records were verified."]}},{"kind":"support-limitation","source_text_sha256":"434b4f9eaba069a31eca61de3287c24acf573dca3300c98744ba22f2852f0923","user_description":{"owner":"agent","sentences":["This support applies to the recorded source only. App use, training, generation, Headless workflows, the full increment and current-source qualification are not passed by this record."]}},{"kind":"support-limitation","source_text_sha256":"b2ac05aa89ea2fdabda6c760dbe5f6acc19dd208260b9b85fb9bec1657136a21","user_description":{"owner":"agent","sentences":["This record gives no permission to run another test, transfer files or publish data. Real model quality tests are excluded. The agent must complete the remaining technical work."]}},{"kind":"support-scope","source_text_sha256":"1b3700dd2800414dad4da404bda41e69d0432faa9b74ee25cc4dca80d23bf663","user_description":{"owner":"agent","sentences":["The automated Desktop test trained a small generated model.","The result stayed private until explicit Save.","The saved record reopened and survived a page reload.","The app and its owned worker shut down correctly."]}},{"kind":"support-limitation","source_text_sha256":"019a730a145b1fd47cfe230a903b513c47eda02cb510f664d87e6fec541dc079","user_description":{"owner":"agent","sentences":["No action needed.","The agent must complete Headless training, evaluation software, generated output and host checks.","This result covers one recorded local Desktop workflow.","It does not qualify other hosts, all methods, other installations, general hardware performance, current software or the full increment."]}},{"kind":"support-limitation","source_text_sha256":"e84e9dde257c65d42c048295ce9769f82e994a6a9f8cce716e234bc3a35bd3c4","user_description":{"owner":"agent","sentences":["Model quality tests remain outside this increment.","This record gives no permission for another test run, retry, data transfer, cleanup or publication."]}},{"kind":"support-scope","source_text_sha256":"7cb14f493bad6866e8d4d025de1a81f4876ef3a65fc3276ee090607a649a1fea","user_description":{"owner":"agent","sentences":["The agent tested the exact saved model and dataset choices, training settings and permission list.","The existing popup and chat views support both approval methods.","These software checks do not start a training task."]}},{"kind":"support-limitation","source_text_sha256":"35805158bdec0cf44e7ba44f206759ee82a1b644bbf06752f0101286e801b921","user_description":{"owner":"agent","sentences":["No action needed.","The agent must finish approval storage, task execution and public host integration.","This private preview is off by default.","This record does not qualify the current software or close the increment."]}},{"kind":"support-limitation","source_text_sha256":"ee9c88cf2e2657fad1acbd8868b3ada79f3ec7eb35fcc26183400ab66a63f2c4","user_description":{"owner":"agent","sentences":["Model quality tests stay outside this increment.","This record permits no new app test, native test, model download, supplier change, retry, cleanup or publication."]}},{"kind":"support-scope","source_text_sha256":"d449adbc9df88ee215332d5bf4f63842341cdcaa4719a0f24630d557f156bf4c","user_description":{"owner":"agent","sentences":["The private receiver checked and stored small test training result files. Its local checks and independent review passed."]}},{"kind":"support-limitation","source_text_sha256":"d50b659831b1cae00838af5c6aa0d3a839b772ff0a218c39a45e328bbc7dd881","user_description":{"owner":"agent","sentences":["This reviewed local work applies only to the recorded software version. Required parent checks remain separate."]}},{"kind":"support-limitation","source_text_sha256":"73eb396ac783ac128fa112e995f25dd0e7d9f037bfb914da32b0a1773b3e73dc","user_description":{"owner":"agent","sentences":["Real resource limits, protected result storage, complete training and shutdown, separate model saving, generation and actual app checks remain pending."]}},{"kind":"support-limitation","source_text_sha256":"bdfa398f5d62a05906bb65d12d51cd0d7372950760f611f295dc575b40cd2b12","user_description":{"owner":"agent","sentences":["No real model, model quality, physical platform enforcement or complete software suite was tested. This record does not authorize activation or new actions."]}},{"kind":"support-scope","source_text_sha256":"267dbcb7bf5053599651a755e0907d29a43b7845e8b889b3434cdbcc9cc7b0f1","user_description":{"owner":"agent","sentences":["The original file owner can stop new local work and issue a receipt usable once after checking retained files and closing local output operations. Local checks and separate review passed."]}},{"kind":"support-limitation","source_text_sha256":"4f6c4886c0cfae53d361a6a87d6f67c2d465edf54779b0f1e6a2bec06ea0d380","user_description":{"owner":"agent","sentences":["This reviewed local work applies only to the recorded software version. Required parent checks remain separate."]}},{"kind":"support-limitation","source_text_sha256":"154f2ec14534d58b3fe118b1626ec3ba935862a2d18bc463f9cc73bf60a7dd57","user_description":{"owner":"agent","sentences":["Model and input protections and all byte accounting remain in place. Full runtime and worker shutdown, protected result ownership, real resource limits and complete native training remain unqualified."]}},{"kind":"support-limitation","source_text_sha256":"de00bef7e74f814bbbf3d3929c6b84c2659878e7924562624c2404f4fc788e64","user_description":{"owner":"agent","sentences":["Shutdown wiring, parent input/output tracking, separate saving, generation and real app checks remain pending. This record grants no new actions and claims no physical platform, model-quality or full-suite pass."]}},{"kind":"support-scope","source_text_sha256":"e303059966a6f9a31c5f4b472dac68f47cb8344c3b1337418132b645e0f8b3d0","user_description":{"owner":"agent","sentences":["File and transfer operations stay tracked when a task stops or times out.","Focused tests and independent review passed for this component."]}},{"kind":"support-limitation","source_text_sha256":"dca8b310140e0b713601a1f85457c36a3ef22f3a3812e003f6c6fe6f85fccd93","user_description":{"owner":"agent","sentences":["These results cover this recorded change only.","The complete feature and the current combined version still need their own tests."]}},{"kind":"support-limitation","source_text_sha256":"7b62d0553e6ab13851cb62940ed280c9ab667f91eff05fe0bfa9d7d747751d7b","user_description":{"owner":"agent","sentences":["Uncertain file writes stay recorded. All files continue to count toward used disk space.","This change does not retry writes, delete files, free disk space or shut down workers."]}},{"kind":"support-limitation","source_text_sha256":"3f355b5356d9cc971d7de27d8251c26a55d7b09b6aeadebd0f071da085fd55f0","user_description":{"owner":"agent","sentences":["At this checkpoint, training control, system protection, resource limits, protected storage, complete training, saving, generation and app tests were still pending."]}},{"kind":"support-scope","source_text_sha256":"4d9a4c2191d7c67a9d7e6e66e0f0e12e7df7bb5ffff885691fae8c8cefb858c5","user_description":{"owner":"agent","sentences":["Training preparation and file checks use the same worker.","A one-use file check reports readiness for shutdown. It does not prove that the worker has stopped.","Focused tests and independent review passed."]}},{"kind":"support-limitation","source_text_sha256":"ee4fc0e45643a86d714eb1f81860f65fc784fedb341b93153b4de6f382813b6d","user_description":{"owner":"agent","sentences":["At this checkpoint, full shutdown wiring, system protection, resource limits, protected storage, complete training, saving, generation and tests in the running apps were still pending."]}},{"kind":"support-scope","source_text_sha256":"f91c2e6e7b04c1d431d00ed4e712348cc46055676ac908031615ab4e1a934d3e","user_description":{"owner":"agent","sentences":["The optional training controller waits for file operations to stop, checks worker readiness and confirms worker shutdown.","The default behavior is unchanged. Focused tests and independent review passed."]}},{"kind":"support-limitation","source_text_sha256":"75641952385c8edecae825609ea41b6a4f22ff9614292c29fb739770bc39f0ba","user_description":{"owner":"agent","sentences":["These results cover this recorded change only.","The complete feature and the current combined version still need their own tests."]}},{"kind":"support-limitation","source_text_sha256":"16134102d771f0bc59b3d6c09b0371538189489359cb0898b9015817ecd54c77","user_description":{"owner":"agent","sentences":["All files and reserved disk space stay recorded, including uncertain results.","This change does not retry work, delete files, release disk space or save a model."]}},{"kind":"support-limitation","source_text_sha256":"a3160a9afba8f642db0c2b815aa66997d23623daf08e85ba2cc57499a445eea7","user_description":{"owner":"agent","sentences":["The training adapter still needs to be completed.","Storage limits, protected storage, recovery after a crash and an actual training run remain pending.","System protection and the complete apps also need tests."]}},{"kind":"support-scope","source_text_sha256":"4564f031a0ee415a7a08371efba206569517df27e07a89329069987b418b5db2","user_description":{"owner":"agent","sentences":["The optional training-result storage module builds and passes its startup checks.","It has not passed the Windows file tests."]}},{"kind":"support-limitation","source_text_sha256":"d94eb3dd28af4a5a2acbac56987a6619296b6df739ec146cd8928bbba3f69f2d","user_description":{"owner":"agent","sentences":["These are reviewed local code changes.","They do not complete a roadmap task or pass the remaining qualification tests."]}},{"kind":"support-limitation","source_text_sha256":"eff34732d7e8dbc6b9bee16ad1415a09d365b249a44caae0b81253d15fb080be","user_description":{"owner":"agent","sentences":["Four actual Windows folder tests failed before training data was written.","The latest test could not create a file inside the protected folder.","Earlier files and failed results remain saved.","No weaker protection is enabled."]}},{"kind":"support-limitation","source_text_sha256":"36bf54b3a69e57746700441f238fdf353815e84c2178fc33f29699786b7e6213","user_description":{"owner":"agent","sentences":["The agent still needs to finish protected storage, storage limits, worker shutdown, candidate review, model saving, generation and app tests.","Completed model accuracy tests were not repeated."]}},{"kind":"support-scope","source_text_sha256":"b7ae3284052bdcfead45ecb27ad4fb8d1b01dcb86cec80f3763c10470043765f","user_description":{"owner":"agent","sentences":["The small file-test tool now checks the exact code and program versions, safe startup settings, file locks and process shutdown.","Its setup and refusal tests passed."]}},{"kind":"support-scope","source_text_sha256":"d12ae311911e0155552c1d4169908694c1cd33658ce33974b204008e7d68ca41","user_description":{"owner":"agent","sentences":["The storage permission setup passed code checks.","The actual Windows file test still failed."]}},{"kind":"support-scope","source_text_sha256":"f5c3ff74cd80163011e833e4bd15b02aecfb5871f30b9cb89d844bd491bddce7","user_description":{"owner":"agent","sentences":["The storage test now records short numeric failure details.","These details showed that Windows had not granted the permission needed to change the folder rules."]}},{"kind":"support-scope","source_text_sha256":"7f7212c4d00b21790f8a25a8fc80650f774df803af003d86844e39c22e0040c8","user_description":{"owner":"agent","sentences":["New storage objects receive their final protection rules at creation.","The actual Windows test then refused the first file inside the folder, before any training data was written.","This storage design remains unavailable."]}},{"kind":"support-scope","source_text_sha256":"b02b3238371fbdf1525d4b4ce4f7a707a899df38c8733fe9ef10cd0efb7625e9","user_description":{"owner":"agent","sentences":["The training worker must wait until the app has prepared the complete list of result files.","Focused tests and an independent code review passed."]}},{"kind":"support-limitation","source_text_sha256":"cc5afb79574123b5dc4c5bdac1ae9a394df4c4183e77621984e702ae1aaf57ae","user_description":{"owner":"agent","sentences":["These records show completed component work.","They do not complete a roadmap task or enable the feature."]}},{"kind":"support-limitation","source_text_sha256":"df17dd704028bbd1ee078676f78cc47b88c641de4d59a059299a56726b2f37e3","user_description":{"owner":"agent","sentences":["The agent must finish shared storage limits, protection after a crash, training-worker connections, candidate review, model saving and app tests."]}},{"kind":"support-limitation","source_text_sha256":"6c8827c42c0558d94898ea3a004d6a8a9ee3e9dd94e71ae906c037f651994f57","user_description":{"owner":"agent","sentences":["Earlier failed runs stay saved.","One restricted test did not save complete shutdown evidence.","It does not count as successful cleanup.","Model accuracy tests were not repeated."]}},{"kind":"support-scope","source_text_sha256":"48da2d3cc86fa6c7e0a9f866bc83aa465a18fcf7613ab62d2a5145d42f85496b","user_description":{"owner":"agent","sentences":["The tested storage component can keep a training result in one protected file.","Code checks and an independent review passed."]}},{"kind":"support-scope","source_text_sha256":"394963bb74fa0b18c6566f03675c3903c4fbd82cf6b089e86584187be204e351","user_description":{"owner":"agent","sentences":["The file test now records which operation failed.","It identified an unintended second read of the protected file."]}},{"kind":"support-scope","source_text_sha256":"350d64a0d7073b763f74401623e1869a03d8fce7638473cfd9eb8bc746b7414f","user_description":{"owner":"agent","sentences":["The agent fixed the second-read issue.","Code checks and an independent review passed.","The original file owner keeps its required permissions."]}},{"kind":"support-scope","source_text_sha256":"a41fe399ef00dbcaaa585a4ea4f33f9980f9dc94f32220951154eaf275231d7f","user_description":{"owner":"agent","sentences":["The Windows file test passed all eight checks.","Second reads and writes were refused.","The original readers returned the correct data.","Active readers prevented deletion.","The test removed the file through its original handle.","The test processes stopped and the test jobs returned to their observers."]}},{"kind":"support-scope","source_text_sha256":"32b8013b2a382f9563a9f5f3ae4d84909448a5d67389607b36d50c8e64534775","user_description":{"owner":"agent","sentences":["The output receiver records the exact name, group, type, size and checksum for each training file.","It checks this information before accepting file data.","Focused tests and an independent review passed."]}},{"kind":"support-scope","source_text_sha256":"7dbdce4fc9de63fb353c70ce4b424f17f75ff582e215a26825e709a19a77fbed","user_description":{"owner":"agent","sentences":["The file list now uses a small, fixed storage format.","The encoder checks file names, groups, types, sizes and checksums.","Malformed lists are refused before file operations.","Focused tests and an independent review passed."]}},{"kind":"support-scope","source_text_sha256":"32eb153ac92dbb02c8388df3e68894c8f6ca34e6024617143dfc9dcce4b05bc1","user_description":{"owner":"agent","sentences":["The storage adapter connects training-file delivery to the original storage owner.","It limits data segments and refuses requests from a different user or workspace.","It keeps unfinished operations recorded after a stop request.","Six focused check groups and an independent review passed."]}},{"kind":"support-scope","source_text_sha256":"7b3b9440ea0ab0c350ddee42852328d0cdb03247f259aa14049930214a351eff","user_description":{"owner":"agent","sentences":["The original result owner can report which checkpoint and candidate files finished writing.","The receiver and storage adapter passed a four-file integration test.","Corrupt candidate data was refused and the original storage owner was retained.","The file list does not approve saving a model or prove that the training task finished."]}},{"kind":"support-limitation","source_text_sha256":"a421f72c7d7b73c6fa48c1e2ef0633ab9845dbe57a1645094497d9ad82b50a59","user_description":{"owner":"agent","sentences":["These results cover individual software components.","They do not complete the training tasks or qualify the full application."]}},{"kind":"support-limitation","source_text_sha256":"6a39e57b55cc5e74345cf38f2b3552b9d2144745d5048897e3d1d4f2c5b3af20","user_description":{"owner":"agent","sentences":["The agent must finish storage capacity checks, crash protection and the full training connection.","Candidate review, model saving and real application tests also remain.","A file can finish writing before the training task finishes."]}},{"kind":"support-limitation","source_text_sha256":"3b6f175c73da081b1fa7dfbcfe497d74cd9abcb0c2b434e557d9c167d8370e20","user_description":{"owner":"agent","sentences":["Earlier test failures and retained data remain recorded.","Accepted model accuracy tests will not be repeated.","This update runs no model test and grants no new permission."]}},{"kind":"support-scope","source_text_sha256":"ebe4039ac4a7352b46e53efa172f531eaaaaae347709c5308bde3ab72f133b5a","user_description":{"owner":"agent","sentences":["The app records which training-result files finished delivery.","The file list becomes available only after the original receive operation has finished."]}},{"kind":"support-limitation","source_text_sha256":"1696a50bdd78a161919e9b7758630917ce4edf164f8f1dfb86e5162846a655fe","user_description":{"owner":"agent","sentences":["The agent must finish the training connection, current result checks, candidate review, separate saving and real application tests.","These component checks do not complete the roadmap task."]}},{"kind":"support-limitation","source_text_sha256":"ee56f8d9de12c26c47a8e339fb0626de00e80ae7321b3936172d58c48eb23002","user_description":{"owner":"agent","sentences":["The stronger storage service remains separate pending work.","Accepted model accuracy tests will not be repeated."]}},{"kind":"support-scope","source_text_sha256":"3cb33d7bdbed3e87a77bc4d6c381d8b7d0e29dde6628b15bf486845396d26ffe","user_description":{"owner":"agent","sentences":["The app can make a bounded local copy of the selected model.","It checks file sizes, checksums, available disk space and the current user permissions."]}},{"kind":"support-scope","source_text_sha256":"164cf18c87076ffa1b56a522ef83d8eb4357e5507f2ec39368701ab5528cab0e","user_description":{"owner":"agent","sentences":["The training worker can use the verified local model and dataset copies.","It keeps the existing safe model-loading rules and limits the result files."]}},{"kind":"support-scope","source_text_sha256":"7857d3f066bec559665e39531d39665dfe792af7b75fbfd26ec21643ca032a3d","user_description":{"owner":"agent","sentences":["The local training worker starts through the existing guarded process launcher.","It requires the exact approved settings and an installed runtime."]}},{"kind":"support-scope","source_text_sha256":"c80901310b06664c63dbb5ef4a7e82d39fdb8d306b11147a958964eb6b08971f","user_description":{"owner":"agent","sentences":["The app connects the selected model copy to its original training task.","It removes a known copy only after its worker and file operations have stopped."]}},{"kind":"support-scope","source_text_sha256":"41f2902a339a4b1f01411a13745d1322cc771422ee73de0d6efc6e740efdf70e","user_description":{"owner":"agent","sentences":["The app checks each received result file against the expected file list.","It records the checked names, sizes and checksums only after all file operations finish."]}}]}
+{
+  "schema_version": "roadmap-user-support-descriptions-v1",
+  "support": [
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "c94669eb05f0d8d3c992d69a53fcfaaaf8139834b98a81c005b3ac83c73118a6",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The shared contracts and MCP test launcher were repaired.",
+          "The focused tests passed for secure connections, request scope, and public replies."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "4ef02b6e691fff5653c7a487ab0c1a2f6cb0b5d088423eb6a139c7d9898bdada",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The roadmap still needs the combined repository tests and independent review."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "b0eedc867a27638a19616713ff4a5741d015b11921a0359e8010a74fa0dd5817",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "In the packaged Windows app, the user approved a plan that saves a selected CSV and creates a system.",
+          "The second step waited for the file save.",
+          "The client received the same save reference on retry.",
+          "Data showed one saved CSV with the expected contents."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "249fb69d04f157f57db5716b44c92c8b361db25ddc64e0dd202a689cfa558446",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "This result covers saving a selected local file on Desktop.",
+          "Managed browser import, provider sources, dataset review and exact app reveal still need evidence."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "e56b4e31726a7bbcbbb5f7bf67738ea46bcddd7bcc9a394444eaee91b1413b7a",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "In the Managed browser, the user prepared one CSV for the configured chat client.",
+          "The client read the file type and size.",
+          "Cancel removed access to the preview.",
+          "The usual Add data action saved one copy."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "5b3b279780b2f6073e930bc7fb82f3eee269510cf99bd48f87bcd41f7c6ec29d",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Saving through an approved Managed plan, importing provider sources, preparing datasets and opening them from chat still need evidence."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "05d082c476168a2d795736fc630fef33d5d6f3fa7caeb4167a1f91b153f4e47a",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Both Managed approval screens showed the selected file and permission to save it.",
+          "The user approved the plan in the app popup.",
+          "The client saved one CSV and received the same reference on retry.",
+          "The next step waited for the file save."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "5124908527675eeb0b10095ca15c29e7e9501241c406f5f23088766ff027a10f",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Provider imports, dataset preparation and opening the exact dataset from chat still need evidence."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "8994d1ea63008c7513f9925af790c4f324f2d92852c6a6ab11d04296a3ed5e15",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "In the database test, two imports of the same selected file returned the same saved source.",
+          "An error while saving the source details left no partial records.",
+          "The test used a simulated provider reply."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "1feb208b85115a47dad186a02fb89e6fc6539ebc3740921de1759c4a5fed0b1c",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Provider imports from the chat client, dataset preparation and opening data from chat still need evidence."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "af98873509205d23bfc11e72bf5aa29188d733c1546fdc89096ed3c58ab438e0",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The Data panel test prepared one Parquet file for the selected chat client.",
+          "A paired-client test verified the file type and exact revision.",
+          "Tests refused access from another client and stopped preview after cancellation.",
+          "The packaged Windows app refused a preview for an unselected file."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "f0bd81f0d9c4afbc27073d8f1b1e9dd4c77dc6dfc4d822d8f91b1b06c4613613",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Provider import after approval, Managed browser preview, dataset preparation and opening data from chat still need work."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "f21d16ee24a71ae7c93bb994ff4dea7c2b940543d97b9e94c999d1132628b314",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The Managed browser test prepared one Parquet file for the configured chat client.",
+          "The chat client read the exact revision and could no longer preview that file after cancellation.",
+          "The test used Chrome over local HTTPS, with PostgreSQL and a simulated repository listing."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "6b745d7d4b22dfd9a8662fdb2f2fa73052ccbed2a0aac0a79867c69ebb86aca0",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Provider import after approval, dataset preparation and opening data from chat still need work."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "e16077a4a4fcf241436d33fa1eb0775f0b9989e76cb6e278b4b6da31ee4fd726",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The Data picker shows the license declared in the provider listing.",
+          "The open-license filters keep matching datasets and clear earlier file choices."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "1124ca7040258d36498f8a1494a7cb811f773e9141013f75363628f9451a534e",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "This test used a simulated listing.",
+          "Saved-revision license evidence and full Data journeys have separate checks."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "bb168b501191bca2589057aa710d9e34b8acd73e84736d7cde9453aaada3c84f",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The Desktop and Server tests saved the license codes for the exact imported revision.",
+          "An import can still finish when the license information is unavailable."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "7e6743378329cbbbdb35e4878feac573de04f1441eed62a9173aef742ebcdc42",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The tests used a simulated provider.",
+          "Approving provider imports in chat and testing the full Data workflow still need work."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "bfa79857b0fc5c0b119046571553ad48dc14479e70623383d0b7c59929bc4155",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Add Data shows the saved license for each imported file.",
+          "A file can show an unknown license. Older imports remain readable."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "565d9c5555b19ab266a1dce7c3ff3f37a957e23540d9976f314b5a4736702a00",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The tests used a simulated provider.",
+          "Approving provider imports in chat and testing the full Data workflow still need work."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "50670b2338f7544a0b52266725df649858dbfa3f6eb4b3b7753403e66cefaa15",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The selected source stays unchanged while the app checks it.",
+          "Tests cover expired or withdrawn access, uncertain replies and competing saves."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "6fc44e5dbf6c12a8a4067179bc83d4217f2658b54a635c9ec2e91ceccb6a898e",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "These tests use simulated provider replies.",
+          "The complete dataset and two-host Data takeover tests still need to run."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "16bf2011f080489d32b33223f529b9c53bedf916ed49acc32af8a99d1385445a",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The Desktop and Managed tests saved a provider file after exact plan approval.",
+          "Both approval screens explain the use of provider access.",
+          "Tests cover expired or withdrawn access, competing saves, failed commits and uncertain replies."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "9c212cd207dc50bfe5c51e4982ce04e669e99ec30be42c8b074eebc2de8e3229",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The tests use simulated provider replies.",
+          "The complete Data workflow still needs live tests in both hosts."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "ffd226c318b8fa63b81e1463ec6a8a6f9523e3caa4cacb162d521ff98ec7235f",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Tests read task progress through the Desktop and Managed hosts, HTTP and the official chat client tools.",
+          "Only current plan-review clients with Data read permission can read the exact task.",
+          "Tests reject retired access, foreign tasks, private fields and inconsistent progress."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "fd25c04ba1e21a4ee997379ce55f82058cc4044c75ebad1a01c5fb8b5ec80861",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The tests use isolated local hosts and synthetic records.",
+          "The complete Data workflow still needs live tests in both hosts."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "6499e79acda51bfe2febad192bdb00f84f0f9626071319f4c3d3b20351e1f41f",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Tests inspect up to sixteen exact saved dataset versions and compare two versions.",
+          "Tests cover the application, both hosts, HTTP and the official chat client tools.",
+          "The checks enforce read limits, current Data permission, privacy, input order and consistent split counts."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "fc0824f7b673be22aefabacc5276cd37b47a7b195ab12ff1890422b45ec305db",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "These tests inspect metadata from synthetic records.",
+          "Dataset preparation, the live Data workflow and overall roadmap qualification still need work."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "46717c47bdf94b2adbd7bd185e9fcb7e4e04188fbab3b3a5635b90a14aab0978",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Tests check exact completed local files, read limits, current Data permission and the dataset recipe.",
+          "They reject stale, foreign, duplicate and unsupported inputs.",
+          "The recipe maps to the existing dataset processor."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "5a00794771428e247061b52c28ff039d442ffa56888cf63911263c901a381311",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "These tests check saved file information only.",
+          "Reading file contents, processing datasets and reviewing results still need work."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "01ca98116ce4ec62dca27c2bd2507abdf59ecbb62d87d29be3aa3ff1752be7a5",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The Windows app and Managed browser tests previewed dataset settings after an approved local import.",
+          "The chat client reads the current file revision, recipe, split and limits.",
+          "Tests reject private command details and changed inputs.",
+          "The preview starts no processing."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "3493769d0f31a166260ceeae25640c584525149c4b22129c84aa42985a30e8a7",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Dataset settings can be previewed.",
+          "Processing, result review, saving and opening the exact Data view from chat still need work.",
+          "Increment 5 remains in progress."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "b8f759624bb24160a19ae8c88d7b4c6132b5fc7cc6053bd53fa72ef1765d2936",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Sixteen focused tests check saved local file bytes, file limits and current permission before processing starts.",
+          "They check that an uncertain reply, shutdown or failed cleanup cannot start duplicate work or release protected temporary files."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "dbe1abd90a603047130b487276bf02935f5dcfdfac3fc3596a512bb4c813dc71",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "This reviewed change supplies the protected processing entry point.",
+          "Connecting approved plans, showing task status, reviewing and saving results, and opening the exact Data view remain separate work."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "7bafd0882b8eeb5cd518b67db3a12ba4bcb6c40ac19a49c1f14cfb244581e9ce",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The desktop app and browser passed approved dataset-processing tests.",
+          "The client can check status and recover a confirmed task without starting the same work twice."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "8a5f42ef9222cf960a846f9ce659e9239789e7b46fa15818554ca000f4cca29f",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "This completed change covers processing and task status.",
+          "Result review, saving and opening the exact Data view still need work.",
+          "It does not complete a roadmap criterion.",
+          "Earlier failed test runs remain in the evidence."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "c745052f512a20e83c65c566cb55295fb9106d7b1666fa15fb7e24c590a0b058",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The desktop app and browser passed the complete review and save journey for a small local dataset.",
+          "A separate approval saves one immutable version.",
+          "Repeating the same request returns the same saved result.",
+          "Tests verify the selected columns, quality results and version details."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "de905622f207b7f13e91a05ef05c8e3d9f9b63058e14e04a285e96c6b067731e",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Provider tests use simulated replies.",
+          "The tested dataset uses saved local rows.",
+          "Preparing provider files, OCR and generated datasets are outside this completed change."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "8f99afcb76c247680f52f1d9c9f850ee1bb27d1ff0a4a6756df99bf9fc46d609",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Opening Data work from chat is the next task.",
+          "Recovery after the host exits and separate native checks still need work.",
+          "The parent roadmap criteria are still pending.",
+          "Earlier failed runs remain in the evidence."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "265c13bb980237b0d562128320cc9c6f121de18585b6c713fed4f57e46470415",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The desktop app and browser can show the exact saved source, dataset version or accepted task after separate window consent.",
+          "Taking back control stops new display and context access.",
+          "Saved data and independent tasks remain available."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "7e3325ba24184627f8d37f43c915c4a1331eea43e40b96466a1fc72fda52f6bb",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "This change covers the three Data display actions.",
+          "Other processing modes, recovery after host exit and native checks are outside this change."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "0b088bf1d27627328fae3e84c8f6634460d7b92b027f4af98c36e27b3009d2c6",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The parent increment still needs its own focused acceptance.",
+          "Combined testing follows after all roadmap increments are implemented.",
+          "Earlier failed runs remain in the evidence."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "12af07a4a533ce40e2602b9e06d54de85f346d174172a2ae192e6388a9af01f5",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Both app test journeys previewed exact saved files and dataset versions.",
+          "The preview reports model records and settings without starting processing or sharing source text.",
+          "Current access checks and private-field rejection passed."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "d4072072ece609f9e0076b2542ee18360f10e25dbe76f175ab53359d937f2bef",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The preview is complete, but model and runtime availability are not checked.",
+          "The agent still needs to finish approved Context processing, queries and result display.",
+          "No action needed from you."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "cebbf1f5e88c337080c84e89c9cda0715b4c02cbf633f066b12711f5f0ef0dc0",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Completed model accuracy tests stay closed.",
+          "Native recovery and combined final tests remain separate checks."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "bc3f8aa7d968cfb189841afa2c4b64f714c8497ae850d01f211539d8aa1d6c41",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The internal Context start and cleanup checks passed.",
+          "They checked exact source files, task identity and safe handling of uncertain replies.",
+          "The runtime replies were simulated."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "2f952417ca4945d3cc61ae08c916906e5b59df99744decf346e37b5a1462bd81",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "No action needed.",
+          "The agent still needs to connect approved Context actions to both app hosts and test real Context work.",
+          "These component checks do not complete the roadmap increment."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "fc817f9da80dc1432e5884d6bc4f61699b04472289b2aa0c4a45aef6defb77a7",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "No action needed.",
+          "Completed model accuracy tests remain closed.",
+          "Native recovery, host-exit checks and final combined testing have separate requirements."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "fd41d655419ef41c7acb3d34cfffa6a4e00fd95be4d8cb307d4dd8748444d8f5",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The internal installed-only runtime checks passed.",
+          "They checked copied inputs, exact task replies and safe handling of refused or uncertain starts.",
+          "Related startup and model-download compatibility tests also passed."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "ddfad58456ca76218d404fd13f46d516456b0d83bae7591e3e672d82f93e066b",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "No action needed.",
+          "The agent still needs to connect approved Context plans to the app and test real Context work.",
+          "These component results do not complete the roadmap increment."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "1e9d5eadb4390fcd18de40d91220ae09ddb17b652f6a8d639e791e3960cfa67f",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "No action needed.",
+          "The worker and process replies in these checks were simulated.",
+          "Earlier failures are retained, and physical recovery and final combined tests have separate requirements."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "262da9bab3dc2b726054fe841d20918a29d204e5c4300888656a239cc449ae91",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The installed-only Context host checks passed at the previous committed checkpoint.",
+          "They checked safe worker recovery and one-use start permission in both hosts.",
+          "Related compatibility and build checks also passed."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "1bad3a9d65785037ca9f61e74c51ddf2474ce08396556b939e2deabab39b8bbc",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "No action needed.",
+          "The agent still needs to qualify the new public Context plan connection and complete the remaining Context features.",
+          "These earlier component results do not complete an increment or work chunk."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "0dce193c8ef0895b76386c7ce5e65511243c2cbfb446cc3588c924f1b262fab6",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "No action needed.",
+          "These component checks used simulated worker and process replies.",
+          "Physical recovery and model checks remain separate; completed model accuracy checks were not repeated."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "b430bed43f0b57d2c84a26bf4a46d39d9ecf381d0c86e259451beb0108b604d5",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "No action needed.",
+          "The agent still needs to finish the remaining Context actions and qualify RAG model use.",
+          "These results do not complete the roadmap increment or its work chunks."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "8548078758a0e9662d0cf0c15cd9a82b3021a272d9de5fd0e5f280d6a5487981",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The app journeys used files with unknown license terms.",
+          "Separate worker and host component tests checked known terms.",
+          "These checks do not measure model accuracy."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "b3d5c3de32960a06b3a33f0d327aaa3dd1ca22f298934e53c88b5f449be9e025",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The Context pack workflow passed automated checks in the desktop and browser apps.",
+          "The checks covered approval, source records, saved license terms and duplicate-run protection.",
+          "The result still needs a separate save action."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "f40c501ad91ef7dcec389ded1eaedc85c78181f6b16ace812fff463377ee6c6b",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The installed-model safeguards passed their focused tests and a separate review.",
+          "The checks bind the saved model to existing local safe-weight files and keep private model paths out of public results.",
+          "The tested work is committed."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "05ca5985ebff044ef9560005599b100b8670ed82204556f9e1ec582d3315336e",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "No action needed.",
+          "The agent still needs to finish the public RAG workflow and the remaining Context features.",
+          "These component results do not complete an increment or work chunk."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "2f10a2cd94ddda1e0ca642668647e5407f6372d329cca9a59b0027319224f9d5",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The model replies in these tests were simulated.",
+          "Real archive and storage operations were tested.",
+          "Physical model, resource and recovery checks remain separate, and earlier failures are preserved."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "d80d30a63812109090953275e9c35aaf9e1c04a17b38e9e77434416c76c91d8a",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The local RAG plan connection passed its focused checks and a separate review.",
+          "Both approval screens disclose the selected model and keep saving separate.",
+          "The tested work is committed."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "db51b327e40a911e436431cbceb216c08c44efed92e7eac7d76bf7ffa0b54737",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "No action needed.",
+          "The agent still needs to finish the remaining Context workflow and qualification.",
+          "These component results do not complete the increment or its work chunks."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "cd402808cf46b1133e30cfdde6ec1c5609ed83e667d06a2b9650b25514ded4c7",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "This support records tested component behavior and its limits.",
+          "The remaining workflow needs its own current checks and review."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "b2c164a25d943016204f335636443ea918e6c1eb14dcd71a79ee9563e5eca79e",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The protected Context byte-storage component passed its focused tests and a separate review.",
+          "Existing file ingestion remained compatible.",
+          "The tested work is committed."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "3c3285c0066d6c3db63d62b076b8e85b9283fdb54d05fd23b27c575f609cb0a2",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "No action needed.",
+          "The agent still needs to finish the remaining Context workflow and qualification.",
+          "These component results do not complete the increment or its work chunks."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "2f7b8c332b448c03567829fbe881feda446ec76b758f1bed3e1138c19be2f4d8",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "This support records tested component behavior and its limits.",
+          "The remaining workflow needs its own current checks and review."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "988a9ac545ee170a570159b25ce868df3c872ae02a71c0d1286612fd7a28308b",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The internal reviewed Context save passed its focused checks and a separate review.",
+          "The tested work is committed.",
+          "The database field-order defect was fixed and earlier failures are preserved."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "f11f8ed62142a923e3d44ad075e144091e43ac036a959810d380d295ee430625",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "No action needed.",
+          "The agent still needs to finish the public Context workflow and its qualification.",
+          "These internal results do not complete the increment or its work chunks."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "f79b75126606372ee349e74d049f3c13c2b273d2fc0b055cf2b0a9bff55f0b0e",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "These tests used controlled local data and simulated runtime replies.",
+          "Physical database, model, resource and recovery checks need their own evidence.",
+          "Previously accepted model accuracy checks were not repeated."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "0968c9ae9a2d0eebbb3fe9a4d4bc9359fb1892eb7aeef94319bd6aba2fc27d08",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The approved Context save workflow passed its focused checks and a separate review.",
+          "Both app connections can save the exact reviewed result and read its saved metadata.",
+          "The tested work is committed."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "dfaacb4f6de02ab8e2b7b83a7b3bcf5a76c9819b61566957d531252274012fb7",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "No action needed.",
+          "The agent still needs to finish Context queries, rebuilding, display and their qualification.",
+          "These component results do not complete the increment or its work chunks."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "9645969cf2d8456c21683b87b4f3c828729b4cf7b5aba465e46eddfed6dbb99f",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "These tests used controlled local data and simulated runtime replies.",
+          "Actual host, model, retrieval and recovery checks need their own evidence.",
+          "Previously accepted model accuracy checks were not repeated."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "8fea94ee559563969b6911017160ad614f3a8dce6a028750804e7d946e69df7b",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Automatic checks, Desktop type checks and the Server build passed.",
+          "The app can prove when no task started and record that result once.",
+          "Both connections preserve that result on a retry without starting again.",
+          "The reviewed work is committed."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "84968420c920fb46f5927d71f6437f144b9ec0b8bc2bebf53144e718f50fd278",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "A failure to start does not prove a running task, saved result or successful model, retrieval, runtime or native work.",
+          "Uncertain replies keep their existing safeguards.",
+          "This component does not complete parent criteria or work chunks."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "188d458c1bd8993192b11e3de79cc3b07d5ecdfe88aea670fbe7141d8dd5bbf4",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "These Core and connector tests used controlled data.",
+          "Actual model, runtime, UI, PostgreSQL and whole-roadmap qualification remain separate.",
+          "Earlier failures stay in history.",
+          "The checks neither adopt old tasks nor allow them to run again."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "53aef3a7205af93f952e96b3d6678e03d1fbb86f81f1453e851769757e328de6",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Automatic Context checks, Desktop type checks and the Server build passed.",
+          "The app hashes and writes the same private input copy.",
+          "It keeps files when worker replies are uncertain and retries failed cleanup through the existing task owner.",
+          "The reviewed work is committed."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "4dbce5b183b441105a4228633cc8acad3569509601913f06032accc24d0e06ab",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "No action needed.",
+          "The agent still needs to connect and qualify headless querying, rebuilding and display.",
+          "This component does not supply physical retrieval, resource, worker-stop, native, PostgreSQL or real-app evidence.",
+          "It does not complete parent criteria or work chunks."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "7536f711cd9fb152efc22c2a22b3cca128566f16e894973ad9c9ce2460d40bf0",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The tests used small synthetic files, simulated worker replies, real local staging and the existing task owner.",
+          "They covered cleanup failures and did not discover or alter old directories.",
+          "Previously accepted model accuracy tests were not repeated."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "d4a88e1678c05cfe741dc14c321be7d1829b5435f2b91f4a41aaeefc345df092",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Fifteen automatic check groups, Desktop type checks and the Server build passed.",
+          "The agent can read verified original Context sources and settings with current permission.",
+          "Both connections return bounded metadata without opening source bytes or a runtime.",
+          "Independent review accepted all four component checks, and the work is committed."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "93925144efc6d6ce5bee4fd23c91f41fe26221f22aefdfd26333fc6d7aa86f85",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "No action needed.",
+          "This metadata component grants no new run, old task, source-byte, installation, query or window permission.",
+          "Rebuild execution and actual retrieval, resource, runtime, native, PostgreSQL and real-app checks need separate evidence.",
+          "This component does not complete parent criteria or work chunks."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "ece9c529c8c3f7e74c0bfb04b5c0fdf4fc9d9f6a6acd497b3ca6829864ad9738",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Earlier failures remain in history, and the earlier work record stays unfinished.",
+          "The corrected input and tool-list checks passed.",
+          "Original test definitions, recorded pins and pending qualification remain.",
+          "The whole-software suite and accepted Qwen accuracy checks were not repeated."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "5fec2113b78aa4510f0d036abd9c7e825279eb29b369c116999c749a32380739",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Nine automatic check groups, the Desktop type check, and the Server and Thin Client builds passed.",
+          "A new approval binds a saved Context to its original sources, settings and model.",
+          "Both connections tested one run, exact retry, separate review and save, parent preservation and parent loss after staging.",
+          "Independent review accepted all three component checks, and the work is committed."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "456fc33448ecdbf3c6e390d025964303cc1c2ccd2883fc2ace1a9b5177e3bcfa",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "No action needed.",
+          "This component does not connect queries or revocable display.",
+          "Actual model, retrieval, resource, native, PostgreSQL and real-app checks need separate evidence.",
+          "Saving a new result requires its own approval.",
+          "Parent criteria and the build, query and display work chunks remain open until their own work and checks pass."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "30f5d942437cc49a0201b50c0dec8e9af83c5963e40baed80934af5dc782a4be",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The tests used the real Context owner, SQLite, connectors and approval controls with synthetic bytes and simulated runtime replies.",
+          "The earlier sandbox denial and stale guidance failure remain in history.",
+          "The permitted host fixture and corrected checks passed.",
+          "Accepted Qwen accuracy checks and the whole-software suite were not repeated."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "f49985f299fb1c05bb6a64740bd44d4aace104634f7bb5bc9a9782400f9f29db",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Nine automatic check groups, the Desktop type check and the Server build passed for private Context query support.",
+          "Forty adapter tests and synthetic worker checks passed.",
+          "The tests check permission changes, resource limits, exact model and data selection, safe cleanup and copied citations.",
+          "Independent review accepted all four component checks, and the work is committed."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "baaa7b46c764ddce3a329d0a4f1abec5cf0eb902dbe4a40cf8e4bf8bc8b3daca",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "No action needed.",
+          "This private component does not connect public queries or permit sharing source or query results.",
+          "Actual retrieval, resource, native, PostgreSQL and real-app checks need separate evidence.",
+          "Parent criteria and the build, query and display work chunks remain open until their own work and checks pass."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "e654c31a99b25eeae2c3189cc39fcb7f9f81e79196ed523effa4b1f20e3361a6",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The earlier pass remains in history and predates the citation fix.",
+          "The final receipt includes the fix.",
+          "Existing ordinary queries, model loading and cleanup controls remain in place.",
+          "No model download, accepted Qwen accuracy rerun or whole-software suite was performed."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "2bcbbbb177b56197ee89c57bbfe1aec4c5b966043df1f2dd695405de252664b1",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Nine automatic check groups, the Desktop type check and the Server and Thin Client builds passed for Context display.",
+          "The app checks exact saved references and accepted task ownership before showing fixed details.",
+          "The tests cover current read permission, separate window consent, replay and revoke.",
+          "Independent review accepted all four component checks, and the work is committed."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "441a045eaf24cda09ee2a42c35d78c4e48726878d0db140c96b5a480cbf33831",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "No action needed.",
+          "This component does not connect public queries or query summaries.",
+          "The tests use controlled structured records, delivery and UI fixtures.",
+          "Actual retrieval, resource, native, PostgreSQL and real-app checks need separate evidence.",
+          "Parent criteria and the build, query and display work chunks remain open until their own work and checks pass."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "ac4a07300ab3234242150f84b5694df712c92f54b03cb95e2bd06b7d2cfbcb48",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The host wiring check reads source code and opens no app.",
+          "Display cannot create the Context feature or approve a new task or save.",
+          "Checking an accepted task can validate its output and recover its existing worker under the original task controls.",
+          "Existing window consent stays separate.",
+          "Accepted Qwen accuracy checks and the whole-software suite were not repeated."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "d18e1d10b4eac2acd0d7b8461ea2c359deadc6c7469e9327c21497eb91ac56bc",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Fifteen automatic check groups, the Desktop type check and Server and Thin Client builds passed for question preparation.",
+          "Both hosts check the exact saved Context and original source and model records.",
+          "The client and server check that the returned hash matches the question.",
+          "Independent review accepted all four component checks, and the work is committed."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "bfcedd3bee263b343126851f3a45d18b708876a09127c99d8e94311197e4f903",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "No action needed.",
+          "This component prepares a question hash and saved metadata.",
+          "Public query execution, query-summary display and actual retrieval and resource checks still need work.",
+          "Controlled tests and updated test definitions do not complete actual app, native or parent checks."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "42f8e1062f430fa3b00707fa8ff92313e5b6fdd4baa304f47139b9076251438c",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The application hashes the copied question before it reads metadata.",
+          "The metadata reader receives no question text.",
+          "Transport request buffers keep their existing bounded lifetime; this does not promise forensic erasure.",
+          "Existing limits and failed test history stay intact.",
+          "Accepted model accuracy checks and whole-software testing were not repeated."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "fac6b143c1a691a901e929259d7eeb0c5621737b268cbac34d2eb77746c6ec9e",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Seven focused check groups and the Desktop and Server checks passed for the private query owner.",
+          "Tests checked exact task acceptance, source-linked numeric results, access boundaries and cleanup accounting.",
+          "Tests also used real local files and an isolated SQLite database.",
+          "An independent review accepted the component before it was committed."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "0786677388e491b14b210cb42d4e4ac58a7f58fcd23da4750c21597fab86f3c2",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "This component alone provides no public query or window display.",
+          "Controlled tests do not prove physical model, resource, real-app or native behavior.",
+          "The parent criteria and work chunks remain open until their own work and checks pass."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "d59982a7e71a92f4e83eb9ee983383e36f806b3624cc47f7683ca70b09cfb57e",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The existing model resolver, task owner and cleanup controls stay in place.",
+          "Tests check optional metadata compatibility, current permission and cleanup callbacks.",
+          "Earlier failures remain in history.",
+          "No model accuracy or whole-software tests were repeated."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "7b4acbe38ded4d7e9bc37531e27b6715ed83ea664578f3c0d716c7d07d60b580",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Seventeen focused check groups and the Desktop, Server and Thin Client checks passed for approved Context queries.",
+          "Both composed hosts tested one exact query, accepted-task ownership, replay and denial after source or model permission changes.",
+          "API, SDK and approval controls use the same exact question hash and limits.",
+          "An independent review accepted the component before it was committed."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "fa0c8d974fa803e182d58e91d0904b8ea55bcbcf9b8d4e52d4f1161f742392d9",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Task results contain citation metadata and do not download a model.",
+          "This component alone does not provide query display under window consent.",
+          "Controlled feature tests do not prove physical model, resource, native or real-app behavior.",
+          "The parent criteria and chunks stay open until their own work and checks pass."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "31c75371c276d647970f3e1402768e73e988d05cfc2d96dbb7f9f3c0039f1756",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Earlier test results remain in history.",
+          "The final receipt covers the corrected source and documentation.",
+          "Tests check missing definitions, accepted work after its original request ends, and current model access before results leave the host.",
+          "No accepted model accuracy or whole-software tests were repeated."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "a6a7e9c472a7b18127ad2f0b772f3b0edba8d7f005b94fceee675f6878d29b4e",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Eleven focused check groups and the Desktop, Server and Thin Client checks passed for showing a Context search summary.",
+          "Controlled host tests check current access, saved task identity and cached results.",
+          "UI and SDK tests check approval, replay and revocation.",
+          "An independent review accepted the component before commit."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "9850e5da580087793eb7f490c4a2781ffecaf782b3027d661388899005d94303",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "These controlled tests support the query display feature.",
+          "They do not prove physical model, memory, real-app or native offload behavior.",
+          "The parent criteria and work chunks remain open until their own checks pass."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "a6ec9ac942d04fc5a10e918204afd200ff65c2b5c91f3bf0012c91555c7a345f",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Window approval only permits the supported display.",
+          "It does not permit a new query, model load, save, source-text sharing or use of another task.",
+          "Earlier results and pending checks remain in place."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "bdd6c336ec7ca1d7cb27db4f6dbefc86b20816bd4878ebd71f39b7cfac1bb774",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Seven worker runs completed with the installed model.",
+          "All six query groups reached100% recall on the eight fixed topics and stayed within the recorded resource limits.",
+          "Four result comparisons matched exactly.",
+          "Workers exited and generated test inputs were removed.",
+          "An independent review checked saved outputs without rerunning the model."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "0c6598ec1104bce0f93465b0736ef6ca09d980433a023995bcd9768e971bd368",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "These measurements cover the ordinary retrieval worker.",
+          "The full Headless approval path and real app, MCP and UI journeys still need testing.",
+          "Physical failure and replay checks and parent qualification remain pending."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "27f9776bc5e9f76ce22be73969a1ed39d1df349b2ade17fbeaff6707cc8736a4",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "RAM sampling starts after shared imports.",
+          "The GPU value counts Torch allocations after startup, not all GPU memory used by the process or device.",
+          "Eight samples do not prove statistical speed or broad model accuracy."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "ca0f328c62d8047394c1293836f8bf63a204fe43c5af1c228434b0c641cb18fa",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The existing worker supervisor was reused.",
+          "The CUDA comparison uses the current embedding runtime on both sides.",
+          "No model, dependency, memory guard, offload policy or earlier result changed.",
+          "These observations do not close the parent roadmap."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "6db3b787040c4cca1eca06455237a24fc812710ab2e2a0882a2b8f1c8df02493",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Five fixed CPU and GPU query checks passed with the installed MiniLM model.",
+          "The checks met the retrieval, exact-result, memory and denial targets.",
+          "All six owned processes stopped, and temporary copies were removed.",
+          "Independent review accepted the component, which is committed."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "ef562b5005e2cf1ed2a5bb471889793d59f8c9c86355bda8d42b3edc53d6191d",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "No action needed.",
+          "The real Desktop and Managed app journeys and the physical failure and replay checks still need qualification.",
+          "These worker results do not complete the parent increment or final roadmap testing.",
+          "Earlier failed results stay recorded."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "79b91c3d44d7ca952a11aa276214363cbd24ae56a008e877e4f21cdc25df6a32",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Accepted model accuracy checks and whole-software testing were not repeated.",
+          "The GPU measurement covers the declared Torch query allocation.",
+          "Cleanup affected only verified files and processes from this test.",
+          "Older staging and offload files remain unchanged."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "76fa9ee5328514114cdda1a1a4becdfc09a484544b2a49bbafdb0b51065af5e2",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The Desktop Context workflow passed its feature checks and independent review.",
+          "Users can build, save, search, rebuild and display the tested Context results.",
+          "The completed component is committed."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "9b583cac38f778c81c61fd612c05c2217afe65dc3418796c2586fc70e139eaf9",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "No action needed.",
+          "The current two-question checks for both interfaces and the physical failure tests are separate work.",
+          "The earlier Desktop component does not close the parent increment or final roadmap testing."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "6a4d5405e2e8ec85689cc6b2b0a59739be8b9b0ac3791dd5fadc27cd53c04c25",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Earlier failures stay recorded.",
+          "Accepted model accuracy and whole-software tests were not repeated.",
+          "Production safety limits and older staging files are unchanged."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "35bfe4d3d5a51dae923e84e52cec30d7e280ea73d97edd3269a5028753bf1c53",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "No action needed.",
+          "Both real app interfaces passed the shared Context feature tests.",
+          "The agent checked17test groups and a separate review.",
+          "This covers saved Context, grounded searches, approvals, replay, display and shutdown."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "c6a5bd1dd1b083c3121e5656506ae38e5522c038d4a3ed99a6f7b29329fd3394",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "No action needed.",
+          "Default Desktop startup and failed-build recovery need separate tests.",
+          "This component does not close the increment or the roadmap."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "1a607a6b587257e37233bfb975a9f76b1e77e7fca2857a44209c698f17fa801b",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Desktop tests observed native worker handles.",
+          "Server tests confirmed the expected worker relationship and its later absence.",
+          "These are different forms of evidence.",
+          "Earlier failures and uncertain exits stay recorded."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "55217348b0fbe73a27d2afae666e245e9ca3bf28ae4868903c947bb7dfb490e3",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "No action needed.",
+          "The agent fixed local runtime startup.",
+          "Both app interfaces passed real Context workflows.",
+          "The checks cover worker ownership, connection settings, response handling and shutdown."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "0d7204b6681cf7988ba1b3120d3a5d5a13f02ab2811139e3b1f45fa19f13e8d5",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "No action needed.",
+          "The failed-build tests and final roadmap checks need separate evidence.",
+          "Earlier failures stay recorded."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "2f468cc515c53ac5a9e3ba5e4b96b9763c565996222b6b25a8f8701000ecb39c",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "These are startup checks.",
+          "They do not prove a connection is safe after a worker stops before the app notices.",
+          "Desktop and server shutdown checks use different forms of evidence.",
+          "Other unfinished memory and shutdown work stays separate."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "dd621c0b0c8d0f33fbd2e5cf0eb5bfe4329c83cd01f1533b84274d45b78ac15b",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The training test now accepts the empty output folder created by the app.",
+          "Regression checks use the real training workflow and runtime adapter with synthetic storage and a task that does not train a model.",
+          "All 81 focused worker tests and related helper and documentation checks passed.",
+          "Another agent reviewed the fix before commit b9185e73b."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "e9fa9d7f4ac45ea411d5d4710ca1bc839931dce13753c0433ea4d53631094368",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "This checks the test code.",
+          "It does not prove that model training finished or that Headless training is ready."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "d4d7c2dc7ca9dc34583bb0ae0bcaac120c3339782a1141b84dcce0fe20b87b22",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Both failed app tests and their shutdown records remain.",
+          "The agent must still run the app and host checks.",
+          "These results do not complete a work chunk, criterion or roadmap."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "0d22e0aeb1f6260c08e43a223e934b1118a6c8e90473f23f0170a4524e769aeb",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "These references name completed local work at its recorded source version.",
+          "Another checkout may not have those records. Missing records do not count as passed checks.",
+          "The accepted model accuracy tests were not run again."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "a5b61148487b57b822d571e23c33ed34813a9b301dc4722fe802274cdf1aac39",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Task information now comes from the existing Model service.",
+          "The tests checked permission changes, stopped hosts and saved task results.",
+          "These code tests do not qualify a running app."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "f6f273e80b23218f6d3d3fd2607ab8ed2b90e652d555cd2ebcd6cba6bcca078e",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Both apps now use the original Model service to read task information.",
+          "Reading a task does not start a model or a runtime.",
+          "The agent must still check the complete workflow in the running apps."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "34d32155f49deeb327f2b6727d93f6227f38368524cc712db8159de567926bc1",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The safety checks allow one separately approved Desktop training test.",
+          "They check the earlier failed test and confirmed shutdown first.",
+          "These code checks did not run the app test."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "8241e59887a6837d0dd4276d76543ef137c177e1342b541cff85a319928ae788",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "A separate safety check allows one build of the corrected offline app package.",
+          "It cannot start a model or use the training-test allowance.",
+          "These code checks did not build an app package."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "c7d49ea2d44c7ebf95ca628956859e2a0eda0828aa0ff76149a11f5b0bfbfe3c",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The Tiny Desktop test now has model-quality comparison turned off.",
+          "Focused code tests and an independent review passed before the change was committed.",
+          "No model was loaded or scored."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "b9064b8198e808f5908e038ae819b1fc7fec7cd4739eecfc1290b590661dd71f",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "These results support the code at its recorded version.",
+          "They do not complete a roadmap work chunk, criterion or running-app test."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "8365ede369cac677b66956ee3145d19c33c25106a08a030b0a8a53731ba7da1d",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "These checks did not test model quality or accuracy.",
+          "The optional software evaluation feature stays separate."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "8e9dc59e2b526f75e1aa4e9a94d0bd58df496ac8303f3be778bffe4b45a171a3",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Earlier failed tests and stop records are preserved.",
+          "This progress entry gives no permission to build, run a model, start an app or publish anything."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "10c29ad04f6cadc779bcd94e0c040ae3df80682460dc2c94346fd05bce0991a1",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Another checkout may not have these local records.",
+          "A missing record does not count as a passed test.",
+          "This entry does not qualify the current software or complete its roadmap."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "fa2eb29b6d789fa35a43fcc7919ca633c8a37cc329b087d9d34e4ab8763f48f8",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The reviewed Desktop package was built successfully. Its files and all owned build-process shutdown records were verified."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "434b4f9eaba069a31eca61de3287c24acf573dca3300c98744ba22f2852f0923",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "This support applies to the recorded source only. App use, training, generation, Headless workflows, the full increment and current-source qualification are not passed by this record."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "b2ac05aa89ea2fdabda6c760dbe5f6acc19dd208260b9b85fb9bec1657136a21",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "This record gives no permission to run another test, transfer files or publish data. Real model quality tests are excluded. The agent must complete the remaining technical work."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "1b3700dd2800414dad4da404bda41e69d0432faa9b74ee25cc4dca80d23bf663",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The automated Desktop test trained a small generated model.",
+          "The result stayed private until explicit Save.",
+          "The saved record reopened and survived a page reload.",
+          "The app and its owned worker shut down correctly."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "019a730a145b1fd47cfe230a903b513c47eda02cb510f664d87e6fec541dc079",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "No action needed.",
+          "The agent must complete Headless training, evaluation software, generated output and host checks.",
+          "This result covers one recorded local Desktop workflow.",
+          "It does not qualify other hosts, all methods, other installations, general hardware performance, current software or the full increment."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "e84e9dde257c65d42c048295ce9769f82e994a6a9f8cce716e234bc3a35bd3c4",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Model quality tests remain outside this increment.",
+          "This record gives no permission for another test run, retry, data transfer, cleanup or publication."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "7cb14f493bad6866e8d4d025de1a81f4876ef3a65fc3276ee090607a649a1fea",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The agent tested the exact saved model and dataset choices, training settings and permission list.",
+          "The existing popup and chat views support both approval methods.",
+          "These software checks do not start a training task."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "35805158bdec0cf44e7ba44f206759ee82a1b644bbf06752f0101286e801b921",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "No action needed.",
+          "The agent must finish approval storage, task execution and public host integration.",
+          "This private preview is off by default.",
+          "This record does not qualify the current software or close the increment."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "ee9c88cf2e2657fad1acbd8868b3ada79f3ec7eb35fcc26183400ab66a63f2c4",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Model quality tests stay outside this increment.",
+          "This record permits no new app test, native test, model download, supplier change, retry, cleanup or publication."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "d449adbc9df88ee215332d5bf4f63842341cdcaa4719a0f24630d557f156bf4c",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The private receiver checked and stored small test training result files. Its local checks and independent review passed."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "d50b659831b1cae00838af5c6aa0d3a839b772ff0a218c39a45e328bbc7dd881",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "This reviewed local work applies only to the recorded software version. Required parent checks remain separate."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "73eb396ac783ac128fa112e995f25dd0e7d9f037bfb914da32b0a1773b3e73dc",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Real resource limits, protected result storage, complete training and shutdown, separate model saving, generation and actual app checks remain pending."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "bdfa398f5d62a05906bb65d12d51cd0d7372950760f611f295dc575b40cd2b12",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "No real model, model quality, physical platform enforcement or complete software suite was tested. This record does not authorize activation or new actions."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "267dbcb7bf5053599651a755e0907d29a43b7845e8b889b3434cdbcc9cc7b0f1",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The original file owner can stop new local work and issue a receipt usable once after checking retained files and closing local output operations. Local checks and separate review passed."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "4f6c4886c0cfae53d361a6a87d6f67c2d465edf54779b0f1e6a2bec06ea0d380",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "This reviewed local work applies only to the recorded software version. Required parent checks remain separate."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "154f2ec14534d58b3fe118b1626ec3ba935862a2d18bc463f9cc73bf60a7dd57",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Model and input protections and all byte accounting remain in place. Full runtime and worker shutdown, protected result ownership, real resource limits and complete native training remain unqualified."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "de00bef7e74f814bbbf3d3929c6b84c2659878e7924562624c2404f4fc788e64",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Shutdown wiring, parent input/output tracking, separate saving, generation and real app checks remain pending. This record grants no new actions and claims no physical platform, model-quality or full-suite pass."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "e303059966a6f9a31c5f4b472dac68f47cb8344c3b1337418132b645e0f8b3d0",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "File and transfer operations stay tracked when a task stops or times out.",
+          "Focused tests and independent review passed for this component."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "dca8b310140e0b713601a1f85457c36a3ef22f3a3812e003f6c6fe6f85fccd93",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "These results cover this recorded change only.",
+          "The complete feature and the current combined version still need their own tests."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "7b62d0553e6ab13851cb62940ed280c9ab667f91eff05fe0bfa9d7d747751d7b",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Uncertain file writes stay recorded. All files continue to count toward used disk space.",
+          "This change does not retry writes, delete files, free disk space or shut down workers."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "3f355b5356d9cc971d7de27d8251c26a55d7b09b6aeadebd0f071da085fd55f0",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "At this checkpoint, training control, system protection, resource limits, protected storage, complete training, saving, generation and app tests were still pending."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "4d9a4c2191d7c67a9d7e6e66e0f0e12e7df7bb5ffff885691fae8c8cefb858c5",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Training preparation and file checks use the same worker.",
+          "A one-use file check reports readiness for shutdown. It does not prove that the worker has stopped.",
+          "Focused tests and independent review passed."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "ee4fc0e45643a86d714eb1f81860f65fc784fedb341b93153b4de6f382813b6d",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "At this checkpoint, full shutdown wiring, system protection, resource limits, protected storage, complete training, saving, generation and tests in the running apps were still pending."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "f91c2e6e7b04c1d431d00ed4e712348cc46055676ac908031615ab4e1a934d3e",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The optional training controller waits for file operations to stop, checks worker readiness and confirms worker shutdown.",
+          "The default behavior is unchanged. Focused tests and independent review passed."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "75641952385c8edecae825609ea41b6a4f22ff9614292c29fb739770bc39f0ba",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "These results cover this recorded change only.",
+          "The complete feature and the current combined version still need their own tests."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "16134102d771f0bc59b3d6c09b0371538189489359cb0898b9015817ecd54c77",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "All files and reserved disk space stay recorded, including uncertain results.",
+          "This change does not retry work, delete files, release disk space or save a model."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "a3160a9afba8f642db0c2b815aa66997d23623daf08e85ba2cc57499a445eea7",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The training adapter still needs to be completed.",
+          "Storage limits, protected storage, recovery after a crash and an actual training run remain pending.",
+          "System protection and the complete apps also need tests."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "4564f031a0ee415a7a08371efba206569517df27e07a89329069987b418b5db2",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The optional training-result storage module builds and passes its startup checks.",
+          "It has not passed the Windows file tests."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "d94eb3dd28af4a5a2acbac56987a6619296b6df739ec146cd8928bbba3f69f2d",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "These are reviewed local code changes.",
+          "They do not complete a roadmap task or pass the remaining qualification tests."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "eff34732d7e8dbc6b9bee16ad1415a09d365b249a44caae0b81253d15fb080be",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Four actual Windows folder tests failed before training data was written.",
+          "The latest test could not create a file inside the protected folder.",
+          "Earlier files and failed results remain saved.",
+          "No weaker protection is enabled."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "36bf54b3a69e57746700441f238fdf353815e84c2178fc33f29699786b7e6213",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The agent still needs to finish protected storage, storage limits, worker shutdown, candidate review, model saving, generation and app tests.",
+          "Completed model accuracy tests were not repeated."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "b7ae3284052bdcfead45ecb27ad4fb8d1b01dcb86cec80f3763c10470043765f",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The small file-test tool now checks the exact code and program versions, safe startup settings, file locks and process shutdown.",
+          "Its setup and refusal tests passed."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "d12ae311911e0155552c1d4169908694c1cd33658ce33974b204008e7d68ca41",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The storage permission setup passed code checks.",
+          "The actual Windows file test still failed."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "f5c3ff74cd80163011e833e4bd15b02aecfb5871f30b9cb89d844bd491bddce7",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The storage test now records short numeric failure details.",
+          "These details showed that Windows had not granted the permission needed to change the folder rules."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "7f7212c4d00b21790f8a25a8fc80650f774df803af003d86844e39c22e0040c8",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "New storage objects receive their final protection rules at creation.",
+          "The actual Windows test then refused the first file inside the folder, before any training data was written.",
+          "This storage design remains unavailable."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "b02b3238371fbdf1525d4b4ce4f7a707a899df38c8733fe9ef10cd0efb7625e9",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The training worker must wait until the app has prepared the complete list of result files.",
+          "Focused tests and an independent code review passed."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "cc5afb79574123b5dc4c5bdac1ae9a394df4c4183e77621984e702ae1aaf57ae",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "These records show completed component work.",
+          "They do not complete a roadmap task or enable the feature."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "df17dd704028bbd1ee078676f78cc47b88c641de4d59a059299a56726b2f37e3",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The agent must finish shared storage limits, protection after a crash, training-worker connections, candidate review, model saving and app tests."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "6c8827c42c0558d94898ea3a004d6a8a9ee3e9dd94e71ae906c037f651994f57",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Earlier failed runs stay saved.",
+          "One restricted test did not save complete shutdown evidence.",
+          "It does not count as successful cleanup.",
+          "Model accuracy tests were not repeated."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "48da2d3cc86fa6c7e0a9f866bc83aa465a18fcf7613ab62d2a5145d42f85496b",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The tested storage component can keep a training result in one protected file.",
+          "Code checks and an independent review passed."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "394963bb74fa0b18c6566f03675c3903c4fbd82cf6b089e86584187be204e351",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The file test now records which operation failed.",
+          "It identified an unintended second read of the protected file."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "350d64a0d7073b763f74401623e1869a03d8fce7638473cfd9eb8bc746b7414f",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The agent fixed the second-read issue.",
+          "Code checks and an independent review passed.",
+          "The original file owner keeps its required permissions."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "a41fe399ef00dbcaaa585a4ea4f33f9980f9dc94f32220951154eaf275231d7f",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The Windows file test passed all eight checks.",
+          "Second reads and writes were refused.",
+          "The original readers returned the correct data.",
+          "Active readers prevented deletion.",
+          "The test removed the file through its original handle.",
+          "The test processes stopped and the test jobs returned to their observers."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "32b8013b2a382f9563a9f5f3ae4d84909448a5d67389607b36d50c8e64534775",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The output receiver records the exact name, group, type, size and checksum for each training file.",
+          "It checks this information before accepting file data.",
+          "Focused tests and an independent review passed."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "7dbdce4fc9de63fb353c70ce4b424f17f75ff582e215a26825e709a19a77fbed",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The file list now uses a small, fixed storage format.",
+          "The encoder checks file names, groups, types, sizes and checksums.",
+          "Malformed lists are refused before file operations.",
+          "Focused tests and an independent review passed."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "32eb153ac92dbb02c8388df3e68894c8f6ca34e6024617143dfc9dcce4b05bc1",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The storage adapter connects training-file delivery to the original storage owner.",
+          "It limits data segments and refuses requests from a different user or workspace.",
+          "It keeps unfinished operations recorded after a stop request.",
+          "Six focused check groups and an independent review passed."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "7b3b9440ea0ab0c350ddee42852328d0cdb03247f259aa14049930214a351eff",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The original result owner can report which checkpoint and candidate files finished writing.",
+          "The receiver and storage adapter passed a four-file integration test.",
+          "Corrupt candidate data was refused and the original storage owner was retained.",
+          "The file list does not approve saving a model or prove that the training task finished."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "a421f72c7d7b73c6fa48c1e2ef0633ab9845dbe57a1645094497d9ad82b50a59",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "These results cover individual software components.",
+          "They do not complete the training tasks or qualify the full application."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "6a39e57b55cc5e74345cf38f2b3552b9d2144745d5048897e3d1d4f2c5b3af20",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The agent must finish storage capacity checks, crash protection and the full training connection.",
+          "Candidate review, model saving and real application tests also remain.",
+          "A file can finish writing before the training task finishes."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "3b6f175c73da081b1fa7dfbcfe497d74cd9abcb0c2b434e557d9c167d8370e20",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Earlier test failures and retained data remain recorded.",
+          "Accepted model accuracy tests will not be repeated.",
+          "This update runs no model test and grants no new permission."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "ebe4039ac4a7352b46e53efa172f531eaaaaae347709c5308bde3ab72f133b5a",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The app records which training-result files finished delivery.",
+          "The file list becomes available only after the original receive operation has finished."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "1696a50bdd78a161919e9b7758630917ce4edf164f8f1dfb86e5162846a655fe",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The agent must finish the training connection, current result checks, candidate review, separate saving and real application tests.",
+          "These component checks do not complete the roadmap task."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "ee56f8d9de12c26c47a8e339fb0626de00e80ae7321b3936172d58c48eb23002",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The stronger storage service remains separate pending work.",
+          "Accepted model accuracy tests will not be repeated."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "3cb33d7bdbed3e87a77bc4d6c381d8b7d0e29dde6628b15bf486845396d26ffe",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The app can make a bounded local copy of the selected model.",
+          "It checks file sizes, checksums, available disk space and the current user permissions."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "164cf18c87076ffa1b56a522ef83d8eb4357e5507f2ec39368701ab5528cab0e",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The training worker can use the verified local model and dataset copies.",
+          "It keeps the existing safe model-loading rules and limits the result files."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "7857d3f066bec559665e39531d39665dfe792af7b75fbfd26ec21643ca032a3d",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The local training worker starts through the existing guarded process launcher.",
+          "It requires the exact approved settings and an installed runtime."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "c80901310b06664c63dbb5ef4a7e82d39fdb8d306b11147a958964eb6b08971f",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The app connects the selected model copy to its original training task.",
+          "It removes a known copy only after its worker and file operations have stopped."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "41f2902a339a4b1f01411a13745d1322cc771422ee73de0d6efc6e740efdf70e",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The app checks each received result file against the expected file list.",
+          "It records the checked names, sizes and checksums only after all file operations finish."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "5b10bd075daff2323282e6dd9c49f6cae0c1290d44551213cdeba5d73fc7a8b1",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The trained-model Save task is complete at its recorded source. Both hosts use the existing Save process, separate approval, checked file copying and atomic model registration. Tests cover changed files, permission withdrawal, limits, repeat requests and uncertain saves."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "8e288ab6420d359601c17c768d8c2acca1b31737a348536320e9aeef1f374c34",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Training setup is created only when an approved task needs it. The app keeps the original configuration, supported storage behavior and current permissions. Focused checks and separate review cover this setup code; they do not supply a new training-run pass."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "4e0416a221ebc6c10283f07f64e58237d6b89c706a0aba2f08ab5f9aec489c97",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The app test uses a fresh owned folder and removes children before their parent. The bounded test controller preserves command framing and exits when required. Focused source checks and separate review cover these repairs."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "8e132ce57ef85368d3a22b63d1d03b8c06795172bf4a60c64ee80932199c1eb9",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The app reviews controlled comparison reports against a fixed baseline in both storage backends. It checks result history, current permission and private-data limits. Controlled metrics verify evaluation software and are not real model-quality scores."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "9d65cec8b2d673b5315d5079da2d707e5b04efc39c07c1d1461beef71b6a728f",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "A private image-request contract captures exact model settings and rejects unsafe or private input. Focused contract and type checks passed separate review. No image model was called; actual image execution and import remain pending."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "9cbc7d548740a46555c2551e34ee707ac2bc3bcdff01392e0d7acb3d08ef3ca2",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The existing image task keeps the correct workspace, task identity and permission through its lifecycle. Tests reproduced and repaired the recorded failures. These software checks do not qualify real image generation or import."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "0c726aefd32182a4606ccd851e3ea2e6c154c03823bcb14ca34c3df4fc1fed4a",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Task72 records an actual bounded CPU fine-tuning run, its original candidate files and history, and confirmed cleanup of new test files. Focused checks and separate review passed at the recorded source. Other host and increment checks remain separate."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "c7f2b79dd60d138d379c3d130e08d98ae5add1f877eb9bb133155847df6176e7",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Task73 verifies evaluation and review software with controlled metrics under the approved testing policy. Focused checks and separate review passed. The real trained candidate and hardware evidence stay with Task72; no model-quality score is inferred."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "67619dc54a5e42caf0f30a2f5cbbd3de3d783f76b4fab5a08e4ad7ee1e1d7da9",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Both private host paths match the current candidate files and complete accepted history to the original task and current user permission."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "dec26a6a07400865c13cba982258b6d914b652e1e2b05d66eb886f89fe9e1bec",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Training reports have a fixed format for timing, device, precision and software information. These reports describe a run and grant no permission."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "7244f7f4fbd236c2f881a0c0aa7df54b310543a16645c90090692fe5249f9712",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The existing local training process records bounded, truthful run history. Focused worker and routing tests preserve app and Windows resource limits."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "7bc9dc0f86f69e65affdc8944ec496c608d689040535dc2fc49c4e201ef95d5d",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The app and both hosts check that the run report matches the original process and current candidate files. Older cached results keep their supported identity behavior."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "220ef1140979ac3cd12f52c97e6b7e0ee7f021f081717e36a553ac98b40d1913",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The trained-model Save request identifies the exact task, candidate files and selected name. Fixed request-format and refusal tests passed separate review."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "b8dbcfc73f635c050c8a34db304297dec025c36eadcee67eb206831316ccf220",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "An optional storage adapter copies only reviewed model files and checks their hashes. Tests cover cancellation, open files, changed data and owned cleanup."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "a663fa86cc17964ff82de0bdc77c057633bd2a64286dc052dd024cd59cc9602a",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The existing training task prepares an exact reviewed model copy under separate Save controls. The original task, source folder and pending file operations keep their owner during cancellation."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "70bcfbd9b1851135d337517f7270213bbafdd760e383bf938d1c704310db7d77",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Saving creates the trained model record and its task receipt together. Both storage backends were tested for exact history, changed records, rollback and lost replies."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "84ff2b55394797429b39324868d612c9fbd351022d7e9a0bb6207e4b8ef3b4a1",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Model names stay readable during result review and saving. Both storage backends still reject credentials, paths and private content in names."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "bdd3a49d39c4199d3c9d6b8cc0668c08393684d4b31b27a692fd18e8e3347f6d",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Chat and the app popup request separate approval to save an exact trained candidate. Both approval modes disclose the task, fingerprint, name and file-copy permissions. Execution remains unavailable without its configured adapter."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "d450ed4aa3f641577da83de26ccd6370f66dc142410a02a2b99e692dab111950",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "A separate Save request uses the original accepted training task. The app allows one binding attempt and keeps cleanup separate from permission to write. Focused storage and failure checks passed separate review."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "9fd8e0bf7dd26c05a85a207609c77d64cd9f546c3f704540d252684754656e02",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The private Save process connects one reviewed candidate copy to an atomic model record and receipt. Tests cover lost replies, changed data and cleanup limits in both storage backends."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "0c435609703c3448895abceac002fd63c0720e615cc53cae3471f3e6ca451e31",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Separate trained-model Save approvals use strict saved records, original candidate review and atomic publication. Tests cover both approval channels and modes, revocation, repeat requests and dependency checks."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "3698fbe65efa7e7918d40c1baf2bb295ed94f937f41badb2afdfa8b492645540",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Desktop and Managed browser connect exact Save approvals to the original training task and atomic model registration. Tests cover both approval channels and modes, changed inputs, permissions, lost replies and cleanup limits."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "a0e4ad2323f33ada9b27a4b84d134fef1100627b63f01d3b102d83886efa22d0",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Reviewed source changes support bounded one-use Tiny test admission or corrected current-file observations and final cleanup diagnostics. Each source receipt and review covers only that change; it grants no extra attempt or parent pass."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "d624325d546eeb25df7155dafacc4168acab56a0bea0d827b433c814f0c8cf38",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Private image prompt text is matched to the exact planned request with bounded settings. Focused tests reject invalid text and substitution; separate review passed. No image model was called and no image output was imported."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "b7801ecb9501b9a18769e721e9407e1392e8190ac6d807e3f9eec7b4695aa95b",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Failed training tasks retain a fixed error code, message and bounded stage/type labels. Focused checks and separate review passed. Private worker output remains excluded."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "1820d33dec9db8abe8cd0452cc9499efd4096677c81cc0d264df0c5ede93ef5b",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The first approved diagnostic attempt uses the original limits, ownership and records. Source checks and separate review verified its admission controls. Earlier failure and cleanup requirements remain; this support grants no extra attempt."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "74d9ab7f43d3b059592d4692acd547a1b316a442863ee198d988f6d9b6e7aefc",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Candidate diagnostics record separate bounded facts for current files, CPU execution, process identity and file-count requirements. Identity checks protect file-inventory counts. Focused checks and separate review cover diagnostics, not a new training-run result."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "c36911f2652d136416368640bc09565a6053c6e3df8fc71ef5ad071218eac398",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Focused source checks and separate review verified admission for the first candidate check. Actual training, candidate-file and cleanup observations are recorded separately."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "ab82306d862e4e7b202aee4435969d20d5c88f630dd2ba9a35d4b24950c0f58d",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Private image-model selection uses existing saved metadata readers and captures immutable request input. Focused checks and separate review passed. This is preparation code only; actual image generation and import remain pending."
+        ]
+      }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "2712030b3f60608e9bcc9335276eb4b098e90046161d5ebd51586f4ca8d17dc3",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Approved image start rechecks permission at each asynchronous handoff and keeps ownership of an already accepted task. Focused checks and separate review closed the timing gap. This support supplies no actual image execution or import evidence."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "54b24b9755d05451c6d51c7cf4410c2c924c5446af36bca0520a41b1c9cd804b",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "This evidence covers the local Save task at its recorded source. Actual fine-tuning, product-host connections and current increment qualification need their own evidence."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "1ead629050c5651c68e0619e52bf73645190fed61c7d7167c7b3baaab0e85a49",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "No model accuracy, protected storage service, physical disk quota or external publication test is claimed. Earlier failures and retained data stay unchanged."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "645f96ae1054131ea219d61ce41a446a76247c86e2385d098932b842cca5eb88",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Another checkout may not contain these local receipts. This link does not pass the current source or the whole roadmap."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "cb5cd0b74fc26c85016c18ba4ee477fd585090d0d10562e9143377fc6e435f05",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "This component evidence does not complete Task72 or prove actual worker execution. The bounded Tiny run and later product-host checks provide separate evidence."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "c8b258e4f6d8bd451cbabe3b513be797f841deb9cd40add065029b30098af3d9",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "This evidence grants no model-accuracy pass, protected storage, physical quota, external action, current-source pass or increment pass."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "7b36cfcf49a2afd37e6c6089972c9f3e9997428021f4e46b8fae28a7296f3769",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Another checkout may not contain these local completion records."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "d6ca10f8aa0ad7dd02505ddd9caf104a6ed5ee32ef68b94e828595c8593422ba",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "These are source-code checks. The command-line test used an inert task owner and created no Windows job or model."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "89341cafb2dbf443d5d4920c3b8a971e87914fee9c640efb8de4adb3de02fe22",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "At this earlier checkpoint, Task72 failures and uncertain original shutdown remained unresolved. This record grants no new run, retry, historical cleanup or task/increment pass."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "b5441bc565565b7ad8d1f8207e5dc055d5b38045a38150e77fd82dec669b736a",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "These controlled measurements verify software only. They provide no actual model evaluation, quality score, current candidate or hardware proof, public-host proof, Task73 completion or increment pass."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "5d3b38c76f804d6cce0d864f43dd929604079677ab687ee75cbda9e568623462",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "At this earlier checkpoint, Task72 training and earlier shutdown evidence still needed a safe restart. This record grants no new run or retry."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "39f4985c7d43d32236aa70d1bc9ac728faa508c3310f2bf432587412e29f3ffa",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "No public operation, real model or image generation, output import, Task74 completion or increment qualification is supplied."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "c1cefbb1cdd06ae54cdf9355febdbf1f0b315b0cea92ed13b43818e6a1c26e21",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "A prompt fingerprint links records; it does not hide private text or grant permission. Original execution owners and real-host connections still need qualification."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "3b6088f2df611df366b56ef9b98ee50134ff11cac314d1e30e0ff7ac998d9bcb",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "This evidence covers the shared image task code only. It does not prove real image output, import, public headless access, Task74 completion or increment qualification."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "f44ecf62ea712f722f3c4fd45fd51028f14f31944b36a38fa9a0340826c51f82",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The earlier broad test failure stays in history. Combined qualification remains pending at the approved final boundary."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "c612d0cb9a3703892a749e36bdc6d62626f850e85fa9451f2adc48878ed1a1f5",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Task72 is complete. This supporting link does not qualify the whole increment or its current source."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "8964a46a7201978635d2848f02edea87da3e4e288467e574260bc79612226ac0",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "No model-accuracy score, automatic Save, external transfer or public-host pass is claimed. Unknown earlier files and process ownership remain retained and unchanged."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "434bee449509dd3ca142e4d17960e48a3cea9de48fe6c39363eecc5f8a92a48a",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Another checkout may not contain the exact local Work records."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "dbe966ef145be93d86a4e7ed90acc199d74959badef1ed7f0bc02eb1c0ab227c",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "No real model accuracy, before-and-after quality score or learned capability is claimed."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "128e8c7a2bb0e3db6e84fa52033ff330c6bc49f7e11e02f665f419ddd824ff19",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "No public-host, generation, import or increment pass is supplied. Another checkout may not contain the local records."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "430af1c3a9bd6d889f021c2f47c432392e4cdedd6a74acdd4d4c86eb2ce2045c",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "This is reviewed component code. It does not complete Task70, increment7 or the roadmap, or prove a real app run."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "4f5c6e0b3a050d748c7453fd9fcfd25655b6c5e79075ffb1d41e40056efe8eda",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Complete-task qualification has separate evidence. Model accuracy was not repeated. Saving a trained model needs separate user approval; physical quotas and protected storage are outside this evidence."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "f62a4d57feb7816897d321a8627145afc2a9474cebc089a1d1392c53288d9f1c",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "This is reviewed component code at its recorded source. It does not complete Task71, increment7, the roadmap or real-host qualification."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "cc5329f14a37726dc20c4cb0674471747f714dfc7123b3ae9f3bbee1e1e3369e",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "At this checkpoint, exact Save approval and integration checks remained pending. Accuracy tests were not repeated. No physical quota, protected service or publication permission is granted."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "96c824787ebf558be60188c00340d326c3ee0c50151680fcfa434e8464734e82",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Another checkout may lack these local completion records. This link does not pass the current source or the increment."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "34c2ecdee4dce2ddd541ea397fc7b7c4a9d3b453fca1cf2aa7b8d993fdea954d",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "This is reviewed component code at its recorded source. It does not complete Task71, increment7, the roadmap or real-host qualification."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "f6b274b900cb650d947a809d022915019f3e293d7187f327a59586cd8b88999c",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "At this checkpoint, original-task Save integration, atomic model registration and current-host checks remained pending. No accuracy test was repeated, and no protected service, reserved disk quota or publication permission is granted."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "a3dd4ac123f964106b201c3e2658832b5a092a99097d3c00b23af0439f0ad168",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Another checkout may lack these local completion records. This link does not pass the current source or increment."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "623079c039e3b7716dd93e369a9faf75a0bed4c0a855e05bebfa2913e9462e3b",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "At this checkpoint, model-registration connections, product-host activation and current qualification remained pending. Accuracy was not retested. No physical quota, protected service or external publication permission is granted."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "9587f142f096efed18a6482ebf5f4d4b2bc1b24b6146abc7a2f734ff8dc8d4b8",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "At this checkpoint, saved-plan and product-host connections and current qualification remained pending. Accuracy was not retested. No protected service, physical quota or external publication permission is granted."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "4e427b1843c319c66ab64fcb4641ae382b346e9041bbfaf4aa3187bf193234d3",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "At this checkpoint, product-host connections and current qualification remained pending. Accuracy was not retested. No protected service, physical quota or external publication permission is granted."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "5470f54b18a5cc9f41d71a04c24e8d928362c3f1cc16efc6d7d9c4d432926b7e",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "At this checkpoint, product entry-point and transport connections, real host copying and Task71 qualification remained pending. Accuracy was not retested. No protected service, physical quota or external publication permission is granted."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "441089da0020a1e3f0d297d499775f07cbbe01851969a0328af839680517d85b",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "This link proves no actual training, Task72 completion, current-source pass or increment pass."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "dd06f0806cfca6a4a93ce0a1301d39437b6b28c214f0e1a4e9a1ec001663d31d",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The one-use attempt failed. Worker and file-operation shutdown were observed before the old final hook. Final folder removal and terminal task status were not recorded."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "703b3858e73405b103c5226c1efe3780aa5346b5def819ff516b3cca98a521e5",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "No older-folder changes, model-accuracy rerun or automatic retry is authorized. Another checkout may lack the local records."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "622252bec0809ec9a2b0ff9e4774f27df52a175e128b1b372b4160566998caf4",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "This is private preparation only. It proves no real generation, import, model/runtime selection, public activation, Task74 completion or increment pass."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "52cafa0365e49cd7900a2cee8f9a35acde39166377b39c0d9892e452cba87158",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The prepared request contains private prompt text. Do not save it in plans or diagnostics."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "3b11ca874594d6d782f83fa48a57b85b92e032ccd4fbe7c148a2dbd107e38f97",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "At this source checkpoint, the actual loader failure was still unknown and Task72 and increment qualification remained pending."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "b21390ae2d85d2a87e800b82ed0d4eb5bba64b97884f1fd07c3172f140333128",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Raw errors, paths, user text and model-accuracy checks are excluded. This link permits no further real run."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "3321fa1ccee7a51243c131e2148edff26c127a96e9a23e654e7dd2c7b64574ef",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The latest failed trial proved only its own cleanup. Unknown earlier ownership remains unresolved; its data stays retained. Another checkout may lack the local records."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "fc4b43ffb5c94970c7ce8ee2959a1c20580e4cf98a6be7595218746f1f00c8ec",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "This evidence covers source admission only. The real diagnostic failed while loading the dataset and provided no Task72 or increment pass."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "e7e0c489e34dbfd6bcccd0b4208b916eb09389389452538d9ebeee93db4847d1",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Diagnostic cleanup was observed separately. That record allowed only one further reviewed verification, after proof of the exact first cleanup. It grants no new attempt now."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "c5844808259ee1e6fa60f6315127a28a12a711b128138fe007319b1fd6d1f88b",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "No accuracy test, historical cleanup or third attempt is authorized by this evidence. Another checkout may lack the local records."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "86cfe94473326249ea511acae562c730c838303654a1fb5116a3a15904110d72",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "This evidence covers diagnostics only. Earlier real training succeeded, but combined candidate checks failed. It supplied no Task72 or increment pass."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "aba9864c9f2d0d0ae611992a872603219f876f2b89927cc18600c4b838ba1446",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Raw candidate identifiers, reports, paths, prompts and accuracy checks are excluded. No automatic retry is authorized."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "a54076e1cf2c8c6c776573840137ded365f67cf045a4b2e499bb36730d52cd8a",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Historical failures and ownership records remain. Another checkout may lack the local records."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "a47d7195c696ca536e5f0330127280a0c0ae3f59f1e9849cd362eaf52f59df98",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "This is source evidence only. The real trial failed its CPU check and did not close Task72."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "ed0b2d5670e8fd3ce585348b7f5162fa3e9f79ee5c621fb58be3773e8ca36dad",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "No accuracy test, download, historical cleanup or increment pass is supplied. Another checkout may lack the local records."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "56663513fb37a07a8ba19bfc871f9848fb7b1a14d2de9f14090f2b6e4b3273a7",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "No checkpoint-byte, runtime or supplier proof, generation, import, public-host pass, Task74 completion or increment pass is supplied."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "30f732a5368e370b908953ed6c0ba40623c7f9c604e8b164385a357d5cd2b86b",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The original approval and execution owners must recheck model selection before use. Another checkout may lack the exact local records."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "32fb94cd5cf7631f44e156bb66c0a2cd73fbba419d1aeac244426b3b4933d921",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "This is an internal source connection only. It proves no real checkpoint bytes, runtime, model execution, generation, import, public activation, Task74 completion or increment pass."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "fc7181a540b49a9183c713b46a8cb11512c00f114854e357512792c482d35126",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The trusted model resolver and future public approval process must verify the exact original selection and current permission. Another checkout may lack the local records."
+        ]
+      }
+    }
+  ]
+}

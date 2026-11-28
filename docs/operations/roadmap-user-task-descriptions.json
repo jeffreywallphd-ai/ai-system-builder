@@ -160,10 +160,10 @@
       "roadmap_id": "headless-skills-ui-takeover",
       "increment_id": "models-training-and-generation",
       "record_id": "generate-and-reveal",
-      "source_definition_digest": "332b324b9d60578d737a5aa27a169922da9a2e7c61833704195dfbc73daf7cc2",
+      "source_definition_digest": "82e9033a25754529af474aaef045cdede3fac5fc925602d371eae0be96d55b44",
       "user_description": {
         "title": "Generate and show results",
-        "purpose": "Use existing approved text/image workflows, manage supported tasks and reveal exact model inventory, downloads, training jobs and generated artifacts.",
+        "purpose": "Generate supported text, track exact results and show model tasks with current permission. Image workflows remain in the later image increment.",
         "scope": [
           "Implementation progress and required parent technical checks remain separate."
         ]
@@ -1098,12 +1098,13 @@
       "roadmap_id": "headless-skills-ui-takeover",
       "increment_id": "models-training-and-generation",
       "record_id": "generate-and-import-model-output",
-      "source_definition_digest": "397eea28a6cc428007a44775cad97003fadee5f99acb7bc4640af669c7454fce",
+      "source_definition_digest": "2fbbb0e12f08cb813d8f68e378f8738e0a5326efe96d813b4f9d8c4966a0a058",
       "user_description": {
-        "title": "Generate and import supported outputs",
-        "purpose": "Generate supported text and images and import outputs for review through existing tasks. Apply current permissions and resource limits. Keep prompts private, preserve exact output history and save only approved results.",
+        "title": "Generate and review supported text outputs",
+        "purpose": "Generate text through an approved conversation. Keep the exact response history, review the matching saved result, and save only approved results. A separate export or import still needs its existing approval. Images stay in the later image increment.",
         "scope": [
-          "Implementation progress and required parent technical checks remain separate."
+          "Keep resource limits, current permissions, exact result history and cleanup checks.",
+          "Image generation and image-output import stay pending in the later image increment; no model accuracy test is repeated."
         ]
       }
     },
@@ -1112,12 +1113,13 @@
       "roadmap_id": "headless-skills-ui-takeover",
       "increment_id": "models-training-and-generation",
       "record_id": "qualify-model-workflows-on-hosts",
-      "source_definition_digest": "b897e4a36d70f187c46106ecce9609cba8f5bc87054656ba9af4d1688b0860c9",
+      "source_definition_digest": "4c9842b893027b4c5e14c6cd8c6d767332af95830b2cbadcfc4b5434182d09ac",
       "user_description": {
         "title": "Show and qualify exact model outcomes",
-        "purpose": "Test real approved model downloads, training and generated outputs on Desktop and Managed browser through MCP and paired app views. Check progress, exact results, separate window approval, revocation, resource refusal, failure recovery and owned cleanup. Verify evaluation software with controlled metrics without scoring real model quality. Simulated results cannot pass real execution checks.",
+        "purpose": "Test real approved model downloads, training and text output on Desktop and in the Managed browser. Check progress, exact results, separate window approval, revocation, resource refusal, failure recovery and owned cleanup. Use controlled metrics to check evaluation software; do not score real model quality or use simulated execution as a pass.",
         "scope": [
-          "Implementation progress and required parent technical checks remain separate."
+          "Keep resource limits, current permissions, exact result history and cleanup checks.",
+          "Image generation and image-output import stay pending in the later image increment; no model accuracy test is repeated."
         ]
       }
     },
@@ -1319,6 +1321,48 @@
           "Wait for original IO, worker, SDK and Job shutdown proof before cleanup.",
           "Keep uncertain operations and files. Do not retry, delete or return disk credit without proof.",
           "Protected recovery after a crash remains work for the storage roadmap."
+        ]
+      }
+    },
+    {
+      "record_type": "story",
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "image-generation-and-output-import",
+      "record_id": "review-image-model-and-task",
+      "source_definition_digest": "a8f09cf76e60d40c7bb1d5ded584c6f6dfb75151dcfc57456c4fcbfafa89d0a4",
+      "user_description": {
+        "title": "Review the image model and task",
+        "purpose": "Choose an exact saved supported image model and verify its checkpoint bytes, settings and resource limits. Existing private code is supporting work; current integration still needs testing.",
+        "scope": [
+          "Pending image work. Earlier source support supplies no runtime or parent qualification."
+        ]
+      }
+    },
+    {
+      "record_type": "story",
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "image-generation-and-output-import",
+      "record_id": "generate-and-import-images",
+      "source_definition_digest": "41f7230b86c4a3deb93e153c04d1af3fe060dd7bd44bd58e474c97fc4ca41dd8",
+      "user_description": {
+        "title": "Generate and import images",
+        "purpose": "Run an approved image task through the existing app. Keep prompts private and track the exact task and result. Review the image and import it only with separate current approval.",
+        "scope": [
+          "Pending image work. Earlier source support supplies no runtime or parent qualification."
+        ]
+      }
+    },
+    {
+      "record_type": "story",
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "image-generation-and-output-import",
+      "record_id": "qualify-image-host-workflows",
+      "source_definition_digest": "41bc821e230fab74fbe4cf8da25fe56f0f9673af975e2cb3f4217215ce4d0a5b",
+      "user_description": {
+        "title": "Qualify real image workflows",
+        "purpose": "Test a small real image task with a connected agent on Desktop and in the Managed browser. Check actual image bytes, separate import approval, permissions, failures, resource limits and owned cleanup. Synthetic output cannot pass real execution checks.",
+        "scope": [
+          "Pending image work. Earlier source support supplies no runtime or parent qualification."
         ]
       }
     }

@@ -42,7 +42,9 @@ scope to remove.
 Install the fixed `scripts/roadmap_scope_deferral.py` sibling with the engine,
 its `tests/test_scope_deferral.py` runner bridge and event guidance. Older writers
 that cannot validate this optional archive must not mutate a deferred roadmap.
-Installation creates no event, approval, test pass or scope transfer. Keep the
+Legacy states with no deferral archive or event remain readable without this
+optional sibling. A deferred state still requires the compatible adapter and
+refuses if it is missing. Installation creates no event, approval, test pass or scope transfer. Keep the
 restricted Headless policy and story/refinement lineage tests with this adapter.
 
 The canonical skill lives at

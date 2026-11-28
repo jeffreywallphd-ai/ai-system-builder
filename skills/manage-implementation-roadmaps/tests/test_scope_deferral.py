@@ -1,6 +1,7 @@
 """Technical work moves to a real pending owner; no completion is invented."""
 import copy
 import unittest
+from unittest import mock
 
 import test_roadmap as fixtures
 
@@ -8,6 +9,19 @@ roadmap = fixtures.roadmap
 
 
 class ScopeDeferralTests(unittest.TestCase):
+    def test_legacy_readers_need_no_optional_adapter_but_deferred_history_requires_it(self):
+        with mock.patch.object(roadmap, "scope_deferral_module", side_effect=AssertionError("Do not load an unused adapter.")):
+            roadmap.validate_state_shape(self.engine.repo, self.engine.state)
+        self.engine.apply(self.event())
+        with mock.patch.object(roadmap, "__file__", str(self.engine.repo / "roadmap.py")):
+            with self.assertRaisesRegex(roadmap.RoadmapError, "adapter is unavailable"):
+                roadmap.validate_state_shape(self.engine.repo, self.engine.state)
+        for mutate in (lambda state: None, lambda state: state.pop("technicalScopeDeferrals")):
+            state = copy.deepcopy(self.engine.state); mutate(state)
+            with mock.patch.object(roadmap, "scope_deferral_module", side_effect=roadmap.RoadmapError("Adapter unavailable.")):
+                with self.assertRaisesRegex(roadmap.RoadmapError, "Adapter unavailable"):
+                    roadmap.validate_state_shape(self.engine.repo, state)
+
     def setUp(self):
         self.engine = fixtures.RoadmapEngineTest()
         self.engine.setUp()
@@ -131,6 +145,32 @@ class ScopeDeferralTests(unittest.TestCase):
                            "authorityRef": "task-refinement", "reason": "Split pending outcome after explicit deferral."})
         self.assertEqual(self.engine.state["storyTaskTracking"]["revisions"][:len(before)], before)
         roadmap.validate_state_shape(self.engine.repo, self.engine.state)
+
+    def test_source_can_finish_and_pending_suffix_can_move_images_before_final_qualification(self):
+        self.engine.apply(self.event())
+        self.engine.apply({"type": "roadmap-approved", "note": "Exact user-directed deferral."})
+        self.engine.apply({"type": "chunk-recorded", "chunkId": "pending-task", "summary": "Synthetic engine fixture outcome.",
+                           "areas": ["Fixture"], "tests": ["Synthetic fixture only"], "documentation": [],
+                           "workProof": {"workId": "fixture-work", "receiptDigest": "a" * 64, "reviewDigest": "b" * 64}})
+        for criterion in self.engine.state["increments"][0]["acceptanceCriteria"]:
+            self.engine.apply({"type": "evidence-recorded", "incrementId": "increment-1", "criterionId": criterion["id"],
+                               "kind": "review", "outcome": "passed", "summary": "Synthetic engine fixture evidence only."})
+        self.engine.apply({"type": "increment-completed", "summary": "Synthetic fixture implementation completed."})
+        module = roadmap.scope_deferral_module()
+        recipient = module.definition(self.engine.state["increments"][1]); recipient["number"] = 4
+        final = module.definition(self.engine.state["increments"][-1]); final["number"] = 5
+        final["dependsOn"].append("structured-input")
+        completed = copy.deepcopy(self.engine.state["increments"][0])
+        self.engine.apply({"type": "roadmap-revised", "reason": "Add previously approved chat/input work before deferred images.",
+                           "increments": [fixtures.increment_definition("chat", 2, depends_on=["increment-1"]),
+                                          fixtures.increment_definition("structured-input", 3, depends_on=["chat"]),
+                                          recipient, final]})
+        self.engine.apply({"type": "roadmap-approved", "note": "Approved pending suffix and retained deferred images."})
+        self.assertEqual(self.engine.state["increments"][0], completed)
+        self.assertEqual(self.engine.state["increments"][-2]["id"], "images")
+        self.assertEqual(self.engine.state["increments"][-2]["number"], 4)
+        self.assertEqual(self.engine.state["increments"][-1]["id"], "final")
+        self.assertTrue(roadmap.approval_is_current(self.engine.state))
 
     def test_corrupted_or_detached_history_and_removed_recipient_fail_read_validation(self):
         self.engine.apply(self.event())
