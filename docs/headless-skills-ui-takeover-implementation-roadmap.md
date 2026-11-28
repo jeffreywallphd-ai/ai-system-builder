@@ -3,7 +3,7 @@
 # Headless Skills and Revocable UI Takeover Implementation Roadmap
 
 - Status: `executing`
-- Updated: `2026-11-28T00:29:51Z`
+- Updated: `2026-11-28T04:55:15Z`
 
 ## Objective
 
@@ -520,8 +520,8 @@ Task counts show implementation tracking. Technical qualification remains separa
   - Save a separately approved trained model (`save-approved-trained-model`): complete
   - Run a bounded fine-tuning task (`run-approved-fine-tuning`): complete
   - Evaluate and review the trained candidate (`evaluate-trained-model-candidate`): complete
-- **Generate and show results**: 0 of 2 tasks complete
-  - Generate and review supported text outputs (`generate-and-import-model-output`): planned
+- **Generate and show results**: 1 of 2 tasks complete
+  - Generate and review supported text outputs (`generate-and-import-model-output`): complete
   - Show and qualify exact model outcomes (`qualify-model-workflows-on-hosts`): planned
 
 ### Deliverables
