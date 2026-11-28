@@ -7,7 +7,7 @@ import {copyFile, lstat, mkdir, mkdtemp, open, readdir, realpath, rm, statfs, wr
 import {createServer} from "node:net";
 import path from "node:path";
 import {createPythonRuntimeAdapterFoundation} from "../../../../modules/adapters/runtime/python/createPythonRuntimePort";
-import {exerciseComposedTextWorkflow} from "../../../../modules/hosts/desktop/composition/tests/headless-text-workflow.fixture";
+import {exerciseComposedTextWorkflow, type TextRuntimeObservation} from "../../../../modules/hosts/desktop/composition/tests/headless-text-workflow.fixture";
 import {boundedTrainingTempParent, BOUNDED_TRAINING_CPU_ENVIRONMENT} from "./bounded-training-feature-profile";
 
 const GiB = 1024 ** 3, MiB = 1024 ** 2;
@@ -60,6 +60,7 @@ test("Core approved installed Tiny text inference preserves the exact saved resp
   let root: string | undefined, rootIdentity: Awaited<ReturnType<typeof lstat>> | undefined;
   let foundation: ReturnType<typeof createPythonRuntimeAdapterFoundation> | undefined;
   let facts: Awaited<ReturnType<typeof exerciseComposedTextWorkflow>> | undefined;
+  let checkpoint: string | undefined, runtimeObservation: TextRuntimeObservation | undefined;
   let measuredBytes = 0, measuredFiles = 0;
   let hostCurrent = true;
   let closeFixture: (() => Promise<void>) | undefined;
@@ -95,7 +96,8 @@ test("Core approved installed Tiny text inference preserves the exact saved resp
       const record = {schema: "bounded-text-feature-diagnostic-v1", phase, startup,
         workerRetirementConfirmed: retired, applicationFixtureClosed: fixtureClosed,
         originalIoClosed: ioClosed, rootRemoved: removed, modelQualityTested: false,
-        externalDownloads: 0, imageModels: 0, measuredBytes, measuredFiles, facts: facts ?? null};
+        externalDownloads: 0, imageModels: 0, measuredBytes, measuredFiles, facts: facts ?? null,
+        checkpoint: checkpoint ?? null, runtimeObservation: runtimeObservation ?? null};
       const encoded = JSON.stringify(record) + "\n";
       assert.ok(Buffer.byteLength(encoded) <= 4096);
       await writeFile(evidenceFile, encoded, {flag: "wx"});
@@ -148,6 +150,7 @@ test("Core approved installed Tiny text inference preserves the exact saved resp
   phase = "approved-text-turn";
   facts = await exerciseComposedTextWorkflow(t, "Core", {runtime: foundation.runtimePort, modelDirectory: snapshot,
     temporaryRoot: root, onCleanup() {fixtureClosed = true;},
+    onCheckpoint(value) {checkpoint = value;}, onRuntimeObservation(value) {runtimeObservation = value;},
     registerCleanup(cleanup) {assert.equal(closeFixture, undefined); closeFixture = cleanup;}});
   assert.equal(facts.starts, 1); assert.ok(facts.responseCharacters > 0 && facts.responseCharacters <= 8000);
   assert.equal(facts.associationChecks, 4);

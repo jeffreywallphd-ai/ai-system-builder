@@ -208,3 +208,9 @@ No prompt, response text, token, raw runtime error or private locator is reporte
 Source checks `headless-text-workflow-unit` and `headless-text-workflow-types`
 exercise Core/SQLite controlled Python responses and compile the real driver.
 They supply no physical inference or parent qualification.
+
+Text diagnostics include the last fixed workflow checkpoint and the original
+runtime status. Failed status keeps only allowlisted error codes and exception
+classes; all other values become `other`. Prompts, output, arbitrary error
+messages and detail objects are never copied. A failed original task stays
+failed. Controlled failure tests verify both this redaction and owned cleanup.

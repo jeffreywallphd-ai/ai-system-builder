@@ -64,6 +64,8 @@
     "explicit_driver": "dev-tools/scripts/qualification/headless-training/bounded-text-generation-feature.ts",
     "scope": "Reuse original composed workflow with controlled software cases or a separately invoked bounded installed-model runtime. Source checks execute controlled cases and compile the driver only.",
     "actual_execution": "pending separate explicit qualification Work and original owned cleanup proof",
-    "quality_scored": false
+    "quality_scored": false,
+    "failure_diagnostics_work_id": "headless-text-failure-diagnostics",
+    "failure_diagnostics_scope": "Fixed workflow checkpoints and allowlisted original runtime status/error code/class only; no arbitrary detail text. The first actual Tiny text receipt remains failed with original worker, fixture, IO and fresh-root cleanup confirmed."
   }
 }

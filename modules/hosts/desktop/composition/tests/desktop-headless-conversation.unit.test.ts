@@ -35,7 +35,7 @@ import { composeSystemRunWorkflow } from "../../../shared/composition/composeSys
 import { createConversationWorkflowHandler } from "../../../../application/services/system-run-workflow/conversation-workflow-handler.service";
 import { HeadlessWorkflowMetadataUseCase } from "../../../../application/use-cases/system-run-workflow/headless-workflow-metadata.use-case";
 
-import { exerciseComposedTextWorkflow } from "./headless-text-workflow.fixture";
+import { exerciseComposedTextWorkflow, summarizeTextRuntimeStatus } from "./headless-text-workflow.fixture";
 
 test("desktop binds saved handles to the current client and holds one existing runtime invocation per session", async () => {
   const documents = createInMemoryStructuredDocumentStore();
@@ -148,3 +148,45 @@ test("text recording may outlast the shutdown-drain timer without restarting the
     assert.equal(facts.statusReads, 1);
     assert.equal(facts.responseCharacters, "Delayed synthetic response.".length);
   });
+
+test("text diagnostics retain only closed failure classifications", () => {
+  const privateText = "Private prompt, model output, credential and local path must never be copied";
+  assert.deepEqual(summarizeTextRuntimeStatus({requestId: privateText, status: "failed", data: privateText,
+    metadata: {privateText}, error: {code: privateText, message: privateText,
+      details: {diagnosticClass: privateText, privateText}}}),
+    {status: "failed", failureCode: "other", failureClass: "other"});
+  assert.deepEqual(summarizeTextRuntimeStatus({requestId: privateText, status: "failed",
+    error: {code: "task_failed", message: privateText, details: {diagnosticClass: "GenerationModelLoadError", privateText}}}),
+    {status: "failed", failureCode: "task_failed", failureClass: "GenerationModelLoadError"});
+  assert.deepEqual(summarizeTextRuntimeStatus({requestId: privateText, status: "succeeded", data: privateText}),
+    {status: "succeeded"});
+});
+
+test("original failed text task remains failed and produces only closed diagnostics", async t => {
+  const unexpected = async (): Promise<never> => { throw new Error("Unexpected runtime operation."); };
+  const observations: ReturnType<typeof summarizeTextRuntimeStatus>[] = [];
+  let starts = 0, cleaned = false;
+  const runtime: PythonRuntimePort = {
+    async startTask(request) {
+      starts++;
+      return {requestId: request.requestId, taskType: request.taskType, status: "running", accepted: true};
+    },
+    async readTaskStatus(requestId) {
+      return {requestId, status: "failed", error: {code: "task_failed", message: "Private failure detail",
+        details: {diagnosticClass: "GenerationModelLoadError", raw: "Private payload"}}};
+    },
+    async getHealthStatus() { return {healthy: true, status: {runtimeId: "python-sidecar", status: "ready"}}; },
+    async getCapabilities() { return {runtimeId: "python-sidecar", capabilities: ["conversation-text-generation"]}; },
+    cancelTask: unexpected, ensureModelDownloaded: unexpected, resolveModelDownloadTaskResult: unexpected,
+    getModelStatus: unexpected, unloadModels: unexpected,
+  };
+  let cleanup: (() => Promise<void>) | undefined;
+  try {
+    await assert.rejects(exerciseComposedTextWorkflow(t, "Core", {runtime,
+      onRuntimeObservation(value) {observations.push(value);}, onCleanup() {cleaned = true;},
+      registerCleanup(value) {cleanup = value;}}));
+  } finally {await cleanup?.();}
+  assert.equal(starts, 1);
+  assert.equal(cleaned, true);
+  assert.deepEqual(observations, [{status: "failed", failureCode: "task_failed", failureClass: "GenerationModelLoadError"}]);
+});

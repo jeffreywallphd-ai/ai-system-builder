@@ -41,7 +41,29 @@ export type ComposedTextWorkflowOptions = {
   readonly temporaryRoot?: string;
   readonly onCleanup?: () => void;
   readonly registerCleanup?: (cleanup: () => Promise<void>) => void;
+  readonly onCheckpoint?: (checkpoint: "workflow-prepared" | "task-admitted" | "first-status-read" |
+    "client-access-withdrawn" | "original-recording-settled" | "shutdown-drained" | "saved-turn-read" |
+    "saved-response-read" | "result-associated" | "transcript-verified" | "replay-verified") => void;
+  readonly onRuntimeObservation?: (observation: TextRuntimeObservation) => void;
 };
+type RuntimeStatus = Awaited<ReturnType<PythonRuntimePort["readTaskStatus"]>>;
+const failureCodes = ["task_failed", "generation_insufficient_resources", "model_download_interrupted",
+  "model_download_invalid_snapshot", "model_download_revision_mismatch"] as const;
+const failureClasses = ["RuntimeError", "ValueError", "TypeError", "IndexError", "MemoryError", "OSError",
+  "GenerationRuntimeDependencyError", "GenerationModelDownloadIncompleteError", "GenerationModelLoadError",
+  "GenerationInsufficientResourcesError"] as const;
+export type TextRuntimeObservation = {
+  readonly status: RuntimeStatus["status"];
+  readonly failureCode?: typeof failureCodes[number] | "other";
+  readonly failureClass?: typeof failureClasses[number] | "other";
+};
+/** Never copy arbitrary errors, details, generated text or private locators. */
+export function summarizeTextRuntimeStatus(status: RuntimeStatus): TextRuntimeObservation {
+  if (status.status !== "failed") return {status: status.status};
+  const code = failureCodes.find(value => value === status.error?.code) ?? "other";
+  const kind = failureClasses.find(value => value === status.error?.details?.diagnosticClass) ?? "other";
+  return {status: status.status, failureCode: code, failureClass: kind};
+}
 /** Trusted developer fixture only; no production execution/permission entry. */
 export async function exerciseComposedTextWorkflow(t: TestContext, engine: "Core" | "SQLite",
   options: ComposedTextWorkflowOptions = {}): Promise<{starts: number; statusReads: number; responseCharacters: number;
@@ -147,6 +169,7 @@ export async function exerciseComposedTextWorkflow(t: TestContext, engine: "Core
         runtimeObserved();
         if (options.runtime) {
           const status = await options.runtime.readTaskStatus(requestId);
+          options.onRuntimeObservation?.(summarizeTextRuntimeStatus(status));
           const data = status.data;
           if (status.status === "succeeded" && data && typeof data === "object" &&
               "assistantResponseText" in data && typeof data.assistantResponseText === "string")
@@ -180,6 +203,7 @@ export async function exerciseComposedTextWorkflow(t: TestContext, engine: "Core
     assert.ok(prepared.ok, JSON.stringify(prepared));
     if (!prepared.ok) throw new Error("Original text workflow is unavailable.");
     assert.deepEqual(prepared.value.approvedSessionIds, [sessionId]);
+    options.onCheckpoint?.("workflow-prepared");
     const input = { workspaceId, planId, planRevision: at, sessionId, snapshotRevision: prepared.value.snapshotRevision,
       key: "a6f56324-2051-462c-b45b-d9b49bf6dd4a", text: "Synthetic approved text input" };
     host = composeDesktopHeadlessConversation({ hostIncarnationId, identity, platformDocuments: platform, rootDirectory: root,
@@ -198,9 +222,11 @@ export async function exerciseComposedTextWorkflow(t: TestContext, engine: "Core
     assert.ok(accepted.ok, JSON.stringify(accepted));
     if (!accepted.ok) throw new Error("No accepted text task.");
     const handle = accepted.value;
+    options.onCheckpoint?.("task-admitted");
     const status = new HeadlessConversationStatusUseCase({ sessions: conversations.conversationSessionRepository,
       turns: conversations.conversationTurnRepository, runs: execution.executionRunRepository });
     const running = await status.read(workspaceId, sessionId, handle.turnId, async () => clientCurrent);
+    options.onCheckpoint?.("first-status-read");
     const expectedRunning = { ok: true, value: { sessionId, turnId: handle.turnId, turnStatus: "generating",
       run: { runId: handle.runId, status: "running" } } };
     if (!options.runtime) assert.deepEqual(running, expectedRunning);
@@ -229,6 +255,7 @@ export async function exerciseComposedTextWorkflow(t: TestContext, engine: "Core
     // Withdrawal suppresses outward access; the already accepted original task
     // still owns recording its result. It is neither restarted nor abandoned.
     clientCurrent = false;
+    options.onCheckpoint?.("client-access-withdrawn");
     assert.deepEqual(await status.read(workspaceId, sessionId, handle.turnId, async () => clientCurrent),
       { ok: false, code: "headless.forbidden" });
     released = true;
@@ -245,7 +272,9 @@ export async function exerciseComposedTextWorkflow(t: TestContext, engine: "Core
         await new Promise<void>(resolve => setTimeout(resolve, 50));
       }
     }
+    options.onCheckpoint?.("original-recording-settled");
     await host.drain();
+    options.onCheckpoint?.("shutdown-drained");
     assert.equal(starts, 1); assert.ok(statusReads >= 1);
     assert.equal(runtimeRequest?.taskType, "conversation-text-generation");
     assert.deepEqual(runtimeRequest?.payload, { messages: [{ role: "user", content: input.text }],
@@ -254,9 +283,11 @@ export async function exerciseComposedTextWorkflow(t: TestContext, engine: "Core
     const saved = createLocalConversationRepositoryAdapters(repositoryOptions);
     const runs = createLocalExecutionRunRepositoryAdapters(repositoryOptions);
     const turn = await saved.conversationTurnRepository.getConversationTurnById(workspaceId, normalizeConversationTurnId(handle.turnId));
+    options.onCheckpoint?.("saved-turn-read");
     assert.equal(turn?.status, "succeeded"); assert.equal(turn?.executionRunId, handle.runId);
     assert.ok(turn?.assistantResponseId);
     const response = await saved.assistantResponseRepository.getAssistantResponseById(workspaceId, turn!.assistantResponseId!);
+    options.onCheckpoint?.("saved-response-read");
     assert.ok(originalResponseText && originalResponseText.length <= 8_000);
     assert.equal(response?.text, originalResponseText); assert.equal(response?.status, "completed");
     assert.equal(response?.conversationTurnId, handle.turnId); assert.equal(response?.executionRunId, handle.runId);
@@ -264,12 +295,14 @@ export async function exerciseComposedTextWorkflow(t: TestContext, engine: "Core
     const result = await runs.executionResultRepository.getExecutionResultById(workspaceId, response!.executionResultId);
     assert.equal(result?.assistantResponseId, response!.id); assert.equal(result?.conversationTurnId, handle.turnId);
     assert.equal(result?.executionRunId, handle.runId);
+    options.onCheckpoint?.("result-associated");
     const transcript = await services.readTranscript.readTranscript({ workspaceId, conversationSessionId: sessionId });
     assert.ok(transcript.ok);
     if (!transcript.ok) throw new Error("Saved transcript is unavailable.");
     assert.equal(transcript.turns.length, 1);
     assert.equal(transcript.turns[0]?.assistantResponse?.id, response!.id);
     assert.equal(transcript.turns[0]?.assistantResponse?.text, response!.text);
+    options.onCheckpoint?.("transcript-verified");
     assert.deepEqual(await host.execute(input, authority), { ok: false, code: "headless.forbidden" });
     clientCurrent = true;
     assert.deepEqual(await host.execute(input, authority), accepted);
@@ -280,6 +313,7 @@ export async function exerciseComposedTextWorkflow(t: TestContext, engine: "Core
     assert.deepEqual(await status.read(workspaceId, sessionId, handle.turnId, async () => clientCurrent), { ok: false, code: "headless.forbidden" });
     assert.equal((await saved.conversationTurnRepository.listConversationTurnsBySession(workspaceId, sessionId)).length, 1);
     assert.equal(starts, 1);
+    options.onCheckpoint?.("replay-verified");
     return { starts, statusReads, responseCharacters: originalResponseText!.length, associationChecks: 4,
       modelQualityTested: false as const, artifactImported: false as const };
 }
