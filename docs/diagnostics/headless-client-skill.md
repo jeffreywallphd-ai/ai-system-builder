@@ -9,7 +9,9 @@ provider key; the public transfer profile supports public models without a key.
 A separate popup or authenticated-chat decision approves transfer. Poll only the
 returned original task. Stop uses the separately opted-in model-task-control mode;
 unknown outcomes do not authorize retries. Saving a completed download needs a
-new `models.save-download` approval and fresh original file proof. Ordinary
+new `models.save-download` approval and current original task/source authority.
+It creates a reference-only library record with completion-time verification;
+current cache files and runtime readiness are not checked. Ordinary
 registry Save is a different path. Both production Roots are connected; actual
 paired provider/worker qualification is still tracked separately.
 
@@ -524,3 +526,21 @@ Separate Save approval and actual Native/host qualification remain required.
 The generated portable reference adds one selector to the existing tool, keeping
 the same tool count. Focused synthetic host/transport/stdio checks do not grant
 physical execution or parent-roadmap qualification.
+
+### Controlled public Model download checks
+
+The `headless-public-model-download-journeys` feature profile exercises both
+production Roots and public adapters with small synthetic files. It checks
+approved start, progress, current completion, exact replay, a separately approved
+Save, cancellation of a different queued task, and current-permission denial.
+A selected installed Python runs the existing test-only source producer. Original
+worker startup/socket proof, ASGI tasks, file identity, handoff, receiver and cache
+validation remain in use; only provider bytes and the bounded second-task queue
+are controlled. No model is loaded or scored, and no provider network is used.
+
+Set `ASB_HEADLESS_MODEL_DOWNLOAD_TEST_PYTHON` to an existing installed worker
+Python for this explicit profile. Hosts run one at a time. The default stdin
+fixture stays unchanged; host mode is selected only in test code. These checks
+provide software feature evidence. Real provider transfers, deployed PostgreSQL
+and OIDC, paired app display, resource refusal and final roadmap qualification
+retain their separate requirements.

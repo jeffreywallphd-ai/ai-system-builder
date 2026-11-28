@@ -538,11 +538,13 @@ test("refuse unsupported effects, forged consent, different retries and exceeded
 });
 
 // This guide is installed across agents; preserve the complete authority sequence.
-test("portable download guidance preserves source consent, approved start, original task and independent current Save", () => {
+test("portable download guidance preserves source consent, approved start and independently approved reference Save", () => {
   const guide = readFileSync("skills/control-ai-system-builder/references/models.md", "utf8").replace(/\s+/g, " ");
   for (const text of ["models.download", "sourceManifest", "allowedOrigins", "maximumDurationSeconds", "inferenceMode",
     "Source access and a successful preview do not approve a transfer", "original task", "model-task-control", "models.save-download",
-    "fresh current-file proof", "Download approval never grants Save permission", "unknown reply grants no fresh attempt",
+    "reference-only library record", "verified-at-completion", "current cache files and readiness are not checked",
+    "Download approval never grants Save permission", "unknown reply grants no fresh attempt",
     "Private or gated transfers are unavailable", "No accuracy test"])
     assert.ok(guide.includes(text), `Missing public download boundary: ${text}`);
+  assert.ok(!guide.includes("fresh current-file proof"), "Historical reference Save cannot promise fresh byte inspection.");
 });

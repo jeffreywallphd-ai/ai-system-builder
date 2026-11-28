@@ -372,3 +372,14 @@ Save approval remain in force. Native production wiring, protected retained
 outputs and real-host qualification are still pending.
 
 The optional private `readTrainingCandidate` entry reuses the original training task book, captured Managed registration, actual host/request lifetime and current workspace/ModelRead policy. Metadata admission/disclosure stays transactional; the original candidate reader runs outside transactions. File locators stay host-private, and cached completion/public capability exposure remains unchanged.
+
+### Controlled public download connection journey
+
+The fixed public download feature exercises this production Root, actual Express
+route codecs and trusted browser-document approval service with synthetic test
+registrations and a serialized SQLite stable-read fixture. It retains original
+application/task/cache ownership, separate Save, exact replay, cancellation and
+current-permission checks. This does not qualify deployed OIDC, PostgreSQL/RLS,
+TLS or a browser UI. Those remain actual-host work. The selected installed test
+worker supplies synthetic source bytes without a production bypass. See the
+[headless client guide](../../../../docs/diagnostics/headless-client-skill.md).

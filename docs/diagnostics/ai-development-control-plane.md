@@ -3855,3 +3855,20 @@ neighbors and the actual server build remain required. Complete exact source
 coverage can narrow only the related controller routing suites. Missing, unknown
 or explicitly generic impact retains fallback. These checks start no model or
 provider and cannot complete a host/model task or qualify a parent roadmap.
+
+### Public download connection feature evidence
+
+`headless-public-model-download-journeys` runs the controlled public software
+journeys described in the [headless client guide](headless-client-skill.md). Its
+fixed sequential command is selected for the explicit feature source only.
+Ordinary changes to the controlled worker fixture select its pure configuration
+and queue regressions without starting the host journey. Missing or nonregular
+support, unknown mixed impact or an explicit generic request retain conservative
+coverage. The complete known source group runs the existing public Root routing,
+new journey routing and focused-executor controller regressions.
+
+Its installed worker prerequisite is explicit and has no installer fallback.
+Original shutdown and settled task/receiver IO must precede removal of the new
+test folder. Unknown cleanup stays retained. Controlled byte-transfer success
+cannot qualify a real provider, model, hardware or paired-app journey, and does
+not reopen accepted model-accuracy results.

@@ -29,12 +29,14 @@ schema describes a request; it does not grant host permission or prove readiness
 5. After completion, read `selection.kind: completed-download`. This reports
    historical verification only. Propose a separate `models.save-download` step
    with the same task and source manifest, a new change key and the desired name.
-   The host must obtain fresh current-file proof from the original owner before
-   approval and registration. Download approval never grants Save permission.
+   The host checks the original task, exact source and current permissions.
+   Save creates a reference-only library record. Its file verification stays
+   `verified-at-completion`; current cache files and readiness are not checked.
+   Download approval never grants Save permission.
 
 Reuse the original key and exact request to reconcile an uncertain reply. Do not
 switch to an ordinary Model download or Save operation. Partial configuration,
-changed files, retired authority or an unavailable original owner must fail closed.
+changed source metadata, retired authority or an unavailable original owner must fail closed.
 Actual provider/worker/host qualification remains separate from these software
 integration checks. No accuracy test is part of this workflow.
 

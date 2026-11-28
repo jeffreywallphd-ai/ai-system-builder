@@ -8,13 +8,54 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 import os
 from pathlib import Path
+import re
 import sys
 import tempfile
-from threading import Thread
+from threading import Event, Lock, Thread
 from unittest.mock import patch
 
 
+def host_configuration(environment):
+    """Test-only explicit launch; no production entry point reads this selector."""
+    mode = environment.get("AISB_MODEL_SOURCE_FIXTURE_HOST")
+    if mode is None:
+        return None
+    if mode != "owned-runtime-v1":
+        raise ValueError("Invalid controlled host mode.")
+    host = environment.get("PYTHON_RUNTIME_HOST")
+    port = environment.get("PYTHON_RUNTIME_PORT", "")
+    if (host != "127.0.0.1" or type(port) is not str or
+            re.fullmatch(r"[1-9][0-9]{3,4}", port) is None or not 1024 <= int(port) <= 65535 or
+            len(environment.get("PYTHON_RUNTIME_AUTH_TOKEN", "")) < 32 or
+            re.fullmatch(r"[a-f0-9]{64}", environment.get("PYTHON_RUNTIME_STARTUP_PROOF", "")) is None):
+        raise ValueError("Invalid controlled host launch.")
+    return host, int(port)
+
+
+class ControlledSubmissions:
+    """Keep the second real task queued briefly for original Future cancellation.
+
+    Only the disposable child installs this observer. No task record or result is
+    manufactured. The original executor receives every original callback once.
+    """
+    def __init__(self, executor, observe):
+        self.original = executor.submit
+        self.observe = observe
+        self.count = 0
+        self.lock = Lock()
+
+    def __call__(self, callback, *args, **kwargs):
+        with self.lock:
+            self.count += 1
+            if self.count == 2:
+                self.original(Event().wait, 5)
+            result = self.original(callback, *args, **kwargs)
+            self.observe(self.count)
+            return result
+
+
 def main():
+    selected_host = host_configuration(os.environ)
     from fastapi.testclient import TestClient
     from modules.adapters.runtime.python.worker import app as worker
     from modules.adapters.runtime.python.worker.tasks import model_source_task as task
@@ -31,6 +72,21 @@ def main():
     try:
         stack.enter_context(patch.object(task, "_resolve_huggingface_cache_root", return_value=root))
         stack.enter_context(patch.object(identity, "_resolve_huggingface_cache_root", return_value=root))
+        if selected_host is not None:
+            # Reuse original Uvicorn socket binding and current-child pipe proof.
+            # Provider transport alone is synthetic; ASGI/task/identity/handoff,
+            # recipient acknowledgement and result/cache validation stay real.
+            from modules.adapters.runtime.python.worker import main as entry
+            observation = root.parent / "worker-observations.json"
+            def observe(count):
+                value = json.dumps({"submissions": count}) + "\n"
+                if len(value.encode("utf8")) > 128:
+                    raise ValueError("Controlled observation exceeds its bound.")
+                observation.write_text(value, encoding="utf8")
+            with patch.object(worker.TASK_EXECUTOR, "submit", ControlledSubmissions(worker.TASK_EXECUTOR, observe)):
+                entry._run_runtime(*selected_host)
+            worker.TASK_EXECUTOR.shutdown(wait=True, cancel_futures=True)
+            return
         client = stack.enter_context(TestClient(worker.app))
         class Handler(BaseHTTPRequestHandler):
             protocol_version = "HTTP/1.1"

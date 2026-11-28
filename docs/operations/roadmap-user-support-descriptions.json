@@ -3151,6 +3151,51 @@
           "Displaying the record does not start a model."
         ]
       }
+    },
+    {
+      "kind": "support-scope",
+      "source_text_sha256": "b753e39c14d145b1b8bf693c366784c475d9abe918e1ab99c0b26da09fb18e34",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "Both hosts now connect approved download plans to the existing task owner.",
+          "Saving the result still needs separate approval.",
+          "Twenty focused check groups passed.",
+          "The larger history allowance preserves all records and the original file limits."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "bca4128eea26df5380c7f12b4eb4b3cac443d3238827d8e9178a2a9c264ee317",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "This supporting work does not complete the download task or any roadmap acceptance criterion."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "528658532e312bb59138a7f6ab457e0af615924888867a45b38134c960c69cdf",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "The public download, cancellation and Save journeys still need focused tests.",
+          "Real provider and paired app model tests remain in final qualification."
+        ]
+      }
+    },
+    {
+      "kind": "support-limitation",
+      "source_text_sha256": "aeb39087d73312f6e01e36e6c334330443301fcb204f8198b744a4f9a960921b",
+      "user_description": {
+        "owner": "agent",
+        "sentences": [
+          "This record supplies no accuracy, training, native storage or real provider test pass.",
+          "Earlier failed records remain unchanged."
+        ]
+      }
     }
   ]
 }

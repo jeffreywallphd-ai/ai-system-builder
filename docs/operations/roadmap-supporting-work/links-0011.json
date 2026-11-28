@@ -113,6 +113,46 @@
         "Actual paired Desktop and Managed model journeys, exact result display, separate window permission, resource refusal, recovery and owned cleanup still need their remaining qualification.",
         "Model accuracy tests stay closed. Earlier failures and unknown historical file ownership are preserved. This record grants no new action or permission."
       ]
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "criterion_id": "model-runtime-hosts",
+      "work_id": "headless-model-download-public-history-integration",
+      "work_criteria": [
+        "original-download-plan-chain",
+        "authority-and-unavailable-denial",
+        "security-impact-reviewed",
+        "history-preserved-bounded"
+      ],
+      "receipt_digest": "05a6ec445217f8d683aa446e360e16e2b83cfac1f214c1a7a33afc6541715a25",
+      "review_digest": "7abc6f31e9e5a59a39e28209bc410cbe57b5094dcd55f8abdaa51a40bc5b6dd3",
+      "scope": "Both hosts now connect approved download plans to the original task and separate Save owners. Twenty focused check groups passed. The approved history allowance preserves every record and its original file limits.",
+      "limitations": [
+        "This is reviewed implementation support. It does not complete the download task, an increment or a parent criterion.",
+        "Accepted public download, cancellation and separate Save journeys still need their controlled feature evidence. Actual provider and paired-app model workflows remain final qualification work.",
+        "No accuracy, training, native storage or external-provider pass is supplied. Prior failed records remain intact."
+      ]
+    },
+    {
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "criterion_id": "security-model-supply-and-limits",
+      "work_id": "headless-model-download-public-history-integration",
+      "work_criteria": [
+        "original-download-plan-chain",
+        "authority-and-unavailable-denial",
+        "security-impact-reviewed",
+        "history-preserved-bounded"
+      ],
+      "receipt_digest": "05a6ec445217f8d683aa446e360e16e2b83cfac1f214c1a7a33afc6541715a25",
+      "review_digest": "7abc6f31e9e5a59a39e28209bc410cbe57b5094dcd55f8abdaa51a40bc5b6dd3",
+      "scope": "Both hosts now connect approved download plans to the original task and separate Save owners. Twenty focused check groups passed. The approved history allowance preserves every record and its original file limits.",
+      "limitations": [
+        "This is reviewed implementation support. It does not complete the download task, an increment or a parent criterion.",
+        "Accepted public download, cancellation and separate Save journeys still need their controlled feature evidence. Actual provider and paired-app model workflows remain final qualification work.",
+        "No accuracy, training, native storage or external-provider pass is supplied. Prior failed records remain intact."
+      ]
     }
   ]
 }

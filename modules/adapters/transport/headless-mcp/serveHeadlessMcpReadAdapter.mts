@@ -471,7 +471,9 @@ function addSystemBuilderTools(server: McpServer) {
         if (!completion || completion.manifestDigest !== request.input.sourceManifest.manifestDigest ||
             completion.modelId !== request.input.sourceManifest.source.modelId || completion.revision !== request.input.sourceManifest.source.revision)
           return toolResult({ok: false, code: "headless.stale"});
-        // Historical completion is only preview input. The host separately checks current original files before Save approval.
+        // Historical completion is only preview input. The host separately
+        // checks original task/source and current Save authority. The saved
+        // shared-cache reference grants no current-file or readiness proof.
         continue;
       }
       if (request.operation === "context.query") {

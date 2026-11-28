@@ -23,6 +23,14 @@ installed-only starts, transfer origin/hash/byte/deadline controls and conservat
 unknown/cleanup states unchanged. Rollback disables the additive connections and
 retains saved approvals and accepted task custody.
 
+Registration proof means current original-task/source lineage and save authority.
+Downloaded-Model Save is a shared-cache metadata reference, as defined by ADR0047.
+It retains historical `verified-at-completion` and unchecked-readiness labels;
+it does not inspect current bytes or grant file ownership or loading authority.
+Public feature checks reject a valid but changed source manifest for the original
+task and permission loss before a separately approved Save. Keep download-time
+hash checks and later runtime/use-time controls unchanged.
+
 Focused Root/SDK/codec tests use synthetic source metadata. Actual provider bytes,
 worker outcomes, PostgreSQL/RLS and paired-app qualification remain separate.
 
@@ -4120,3 +4128,23 @@ identity failure and fences later invocations. Tests inject real held original
 verification-reader, copy-reader and copy-writer close failures and prove no
 staging unlink or new attempt; only test-owned handles are later closed by the
 test. This supplies bounded software evidence, not historical cleanup authority.
+
+### Controlled public download feature boundary
+
+The explicit public download feature uses production Desktop/Managed Roots and
+public route adapters with a test-only source worker and synthetic provider
+bytes. It preserves original installed dependency verification, owned worker
+socket/pipe proof, ASGI tasks, file identity/MAC, handoff, receiver settlement and
+cache validation. Trusted test registrations and a local serialized stable-read
+fixture supply controlled identity/persistence evidence, not deployed OIDC/RLS.
+The original executor receives each callback once; a five-second test-only hold
+keeps a second task queued for real cancellation. A bounded local submission
+count is observation only and supplies no task or cleanup authority.
+
+No production entry selects this fixture mode. It accepts only a valid explicit
+loopback launch with current startup nonce and credential. Public proposals still
+need original source consent and exact approval; registration needs separate Save
+and current access. Host shutdown and actual task/receiver IO settlement precede
+cleanup of fresh test storage. Unknown effects remain retained. These checks
+claim no provider/model execution, quality score, hostile same-account isolation,
+physical global quota or final paired-host qualification.

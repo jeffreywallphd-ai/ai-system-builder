@@ -22,8 +22,19 @@ import {identifyManagedHeadlessRouteCaller} from "../../../../../apps/server/src
 import {MANAGED_HEADLESS_AGENT_PATHS} from "../../../../adapters/transport/api-express/security/apiRouteSecurityPolicy";
 import {createOrganizationId} from "../../../../contracts/organization";
 
-const revision = "a".repeat(40), modelId = "fixture/model", timestamp = "2026-11-28T00:00:00.000Z";
-const workspaceId = createWorkspaceId("workspace.public-model-download");
+import {fixture, proposal, post, revision, modelId, timestamp, workspaceId, closeFixtureOwners} from "./headless-model-download-root-fixture";
+
+test("original host shutdown is attempted after an API closure failure, including falsy failures", async () => {
+  for (const failure of [undefined, null, false, new Error("Controlled API closure failure")]) {
+    const calls: string[] = [];
+    await assert.rejects(closeFixtureOwners(async () => {calls.push("api"); throw failure;},
+      async () => {calls.push("host");}), (error: unknown) => error instanceof AggregateError && error.errors[0] === failure);
+    assert.deepEqual(calls, ["api", "host"]);
+  }
+  const calls: string[] = [];
+  await closeFixtureOwners(async () => {calls.push("api");}, async () => {calls.push("host");});
+  assert.deepEqual(calls, ["api", "host"]);
+});
 
 test("production Managed route admission uses the plan registration for Model cancellation and keeps ordinary credentials separate", () => {
   const input = {organization: {organizationId: createOrganizationId("org.synthetic"), principalId: "synthetic-principal"}};
@@ -44,67 +55,6 @@ test("production Managed route admission uses the plan registration for Model ca
     if (!enabled) assert.ok(!calls.includes("plan-review"), "Missing plan support does not attempt plan registration.");
   }
 });
-
-async function fixture(t: TestContext) {
-  const parent = await realpath(tmpdir()), folder = await realpath(await mkdtemp(path.join(parent, "model-public-root-")));
-  const original = await lstat(folder, {bigint: true});
-  const database = await openLocalSqliteDatabase({policy: resolveLocalSqliteDatabasePolicy({dataRootDirectory: folder})});
-  const documents = database.documents;
-  let metadataReads = 0;
-  const previousFetch = globalThis.fetch;
-  globalThis.fetch = async input => {
-    const url = new URL(typeof input === "string" ? input : input instanceof URL ? input.href : input.url);
-    assert.equal(url.origin, "https://huggingface.co"); metadataReads++;
-    if (url.pathname === `/api/models/${modelId}/revision/${revision}`)
-      return Response.json({id: modelId, sha: revision, cardData: {license: "apache-2.0"}});
-    assert.equal(url.pathname, `/api/models/${modelId}/tree/${revision}`);
-    return Response.json(["config.json", "tokenizer.json", "model.safetensors"].map(name => ({type: "file", path: name, size: 10,
-      oid: "b".repeat(40), ...(name.endsWith("safetensors") ? {lfs: {oid: "c".repeat(64), size: 10, pointerSize: 120}} : {})})));
-  };
-  t.after(async () => {
-    globalThis.fetch = previousFetch;
-    await database.close();
-    const current = await lstat(folder, {bigint: true});
-    assert.equal(await realpath(folder), folder); assert.equal(path.dirname(folder), parent);
-    assert.ok(current.isDirectory() && !current.isSymbolicLink()); assert.equal(current.dev, original.dev); assert.equal(current.ino, original.ino);
-    await rm(folder, {recursive: true});
-  });
-  const identity = await initializeLocalIdentityProfile({documents, organizationDisplayName: "Synthetic", principalDisplayName: "Synthetic",
-    now: () => timestamp, createId: () => randomUUID()});
-  const organizationDocuments = documents.forOrganization(identity.organizationId);
-  const workspaces = createLocalWorkspaceRepository({documents: organizationDocuments, rootDirectory: folder});
-  await workspaces.saveWorkspace({workspaceId, organizationId: identity.organizationId, displayName: "Synthetic", status: "active",
-    createdAt: timestamp, updatedAt: timestamp});
-  const repositories = createStructuredOrganizationRepositories(documents);
-  const membership = await repositories.memberships.readMembership(identity); assert.ok(membership);
-  return {folder, documents, organizationDocuments, identity, repositories, membership, reads: () => metadataReads};
-}
-
-function proposal(hostIncarnationId: HeadlessHostIncarnationId, source: unknown) {
-  const sourceManifest = {source, manifestDigest: "sha256:" + createHash("sha256").update(JSON.stringify(source)).digest("hex")};
-  const input = {hostIncarnationId, workspaceId, steps: [{operation: "models.download", idempotencyKey: randomUUID(),
-    name: "Synthetic Model", sourceManifest, allowedOrigins: ["https://huggingface.co"], maximumDurationSeconds: 30, inferenceMode: "causal"}]};
-  const parsed = parseHeadlessBuildPlanProposal(input, hostIncarnationId, {allowLocalFileSave: false, allowModelDownload: true});
-  assert.ok(parsed.ok);
-  return {...input, fingerprint: createHash("sha256").update(JSON.stringify(parsed.preview)).digest("hex")};
-}
-
-async function post(connector: {endpoint: string; fingerprint: string}, route: string, value: unknown, credential?: string) {
-  const agent = createDesktopPinnedLoopbackAgent(connector.endpoint, connector.fingerprint), body = JSON.stringify(value);
-  try {
-    return await new Promise<any>((resolve, reject) => {
-      const call = request(new URL(route, connector.endpoint), {method: "POST", agent,
-        headers: {"Content-Type": "application/json", "Content-Length": Buffer.byteLength(body),
-          ...(credential ? {Authorization: "Bearer " + credential} : {})}}, response => {
-        let text = ""; response.setEncoding("utf8");
-        response.on("data", chunk => {text += chunk; if (text.length > 128 * 1024) call.destroy(new Error("Oversized synthetic response."));});
-        response.on("error", reject); response.on("end", () => {try {resolve(JSON.parse(text));} catch (error) {reject(error);}});
-      });
-      call.setTimeout(8000, () => call.destroy(new Error("Synthetic request timed out.")));
-      call.on("error", reject); call.end(body);
-    });
-  } finally {agent.destroy();}
-}
 
 test("Desktop production Root accepts exact public download review without loading the model feature and gates dispatch", {timeout: 30_000}, async t => {
   const f = await fixture(t);

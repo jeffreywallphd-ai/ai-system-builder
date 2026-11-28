@@ -1604,3 +1604,19 @@ its canonical inventory digest must match the original receiver's files exactly.
 An outward timeout cannot release pending original review work; invalid operation
 contracts stay unknown. Missing, failed, early or changed results have no generic
 lookup, transfer replay, model start, candidate readiness or Save fallback.
+
+### Controlled source worker through public hosts
+
+The existing test-only `model_source_identity_fixture` also supports the explicit
+`owned-runtime-v1` host fixture selector. It reuses the original Uvicorn listener
+and current-child pipe proof, ASGI task/source identity and handoff code, with
+synthetic provider bytes from the existing source-staging fixture. The original
+executor receives each submitted task once; one bounded five-second queue hold
+lets the second task exercise original Future cancellation. A small local count
+observes dispatch without manufacturing a task status or completion.
+
+No production entry reads this selector. Default stdin fixture behavior is
+unchanged. Host mode requires loopback, a valid selected port, launch credential
+and current startup nonce. The public download feature uses fresh contained test
+storage, installed-only startup and original shutdown before cleanup. It grants
+no real-provider, model-quality, native custody or final host qualification.

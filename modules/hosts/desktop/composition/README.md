@@ -382,3 +382,14 @@ Save approval remain in force. Native production wiring, protected retained
 outputs and real-host qualification are still pending.
 
 The optional private `readTrainingCandidate` entry uses the original training task book, captured Desktop grant/read lifetime and fresh original-client workspace/ModelRead policy. It returns only a validated current candidate to trusted host composition. Legacy cached completion stays free of file IO. This entry installs no transport, grants no Save and starts no Model/runtime dependency.
+
+### Controlled public download connection journey
+
+The fixed public download feature exercises this production Root and its pinned
+loopback adapter with the original application/task/cache owners. The existing
+trusted test launch seam selects a controlled source worker; no production
+callback or private map is replaced. Tests cover accepted download, separate
+Save, replay, original cancellation and current-permission denial. See the
+[headless client guide](../../../../docs/diagnostics/headless-client-skill.md).
+Controlled source bytes provide software feature evidence only; actual provider,
+paired-app and resource qualification remain separate.

@@ -954,6 +954,87 @@ TRAINING_SAVE_OWNER_SCOPE = TRAINING_SAVE_OWNER_REQUIRED + (
 )
 
 PUBLISHED_FORM_CHECKS = {
+    'headless-public-model-download-journeys': {'automatic_sources': ('dev-tools/scripts/qualification/headless-model-download/public-model-download-feature.ts',),
+     'automatic_required_files': ('dev-tools/scripts/qualification/headless-model-download/public-model-download-feature.ts',
+                                  'modules/hosts/shared/composition/tests/headless-model-download-root-fixture.ts',
+                                  'modules/hosts/shared/composition/tests/headless-model-download-public-roots.unit.test.ts',
+                                  'modules/adapters/runtime/python/worker/tests/model_source_identity_fixture.py',
+                                  'modules/adapters/runtime/python/worker/tests/test_model_source_identity_fixture.py',
+                                  'modules/hosts/desktop/composition/composeDesktopHost.ts',
+                                  'modules/hosts/server/composition/composeServerHost.ts'),
+     'sources': ('dev-tools/scripts/qualification/headless-model-download/public-model-download-feature.ts',
+                 'modules/hosts/shared/composition/tests/headless-model-download-root-fixture.ts',
+                 'modules/hosts/shared/composition/tests/headless-model-download-public-roots.unit.test.ts',
+                 'modules/adapters/runtime/python/worker/tests/model_source_identity_fixture.py',
+                 'modules/adapters/runtime/python/worker/tests/test_model_source_identity_fixture.py',
+                 'dev-tools/helpers/control_plane/catalog.py',
+                 'dev-tools/helpers/tests/test_control_plane_public_model_download_journeys.py',
+                 'modules/adapters/runtime/python/README.md',
+                 'modules/hosts/desktop/composition/README.md',
+                 'modules/hosts/server/composition/README.md',
+                 'docs/diagnostics/headless-client-skill.md',
+                 'docs/diagnostics/ai-development-control-plane.md',
+                 'docs/security/headless-system-builder-threat-model.md',
+                 'docs/operations/roadmap-supporting-work.json',
+                 'docs/operations/roadmap-supporting-work/links-0011.json',
+                 'docs/operations/roadmap-user-support-descriptions.json',
+                 'skills/control-ai-system-builder/references/models.md',
+                 'modules/adapters/transport/headless-mcp/serveHeadlessMcpReadAdapter.mts',
+                 'dev-tools/scripts/agent-support/tests/headless-plan-skill.unit.test.ts'),
+     'command': ('--import',
+                 'tsx',
+                 '--test',
+                 '--test-concurrency=1',
+                 '--',
+                 'dev-tools/scripts/qualification/headless-model-download/public-model-download-feature.ts'),
+     'timeout': 240},
+    'headless-public-model-download-journeys-types': {'companion_to': 'headless-public-model-download-journeys',
+     'sources': ('dev-tools/scripts/qualification/headless-model-download/public-model-download-feature.ts',
+                 'modules/hosts/shared/composition/tests/headless-model-download-root-fixture.ts',
+                 'modules/hosts/shared/composition/tests/headless-model-download-public-roots.unit.test.ts',
+                 'modules/adapters/runtime/python/worker/tests/model_source_identity_fixture.py',
+                 'modules/adapters/runtime/python/worker/tests/test_model_source_identity_fixture.py',
+                 'dev-tools/helpers/control_plane/catalog.py',
+                 'dev-tools/helpers/tests/test_control_plane_public_model_download_journeys.py',
+                 'modules/adapters/runtime/python/README.md',
+                 'modules/hosts/desktop/composition/README.md',
+                 'modules/hosts/server/composition/README.md',
+                 'docs/diagnostics/headless-client-skill.md',
+                 'docs/diagnostics/ai-development-control-plane.md',
+                 'docs/security/headless-system-builder-threat-model.md',
+                 'docs/operations/roadmap-supporting-work.json',
+                 'docs/operations/roadmap-supporting-work/links-0011.json',
+                 'docs/operations/roadmap-user-support-descriptions.json',
+                 'skills/control-ai-system-builder/references/models.md',
+                 'modules/adapters/transport/headless-mcp/serveHeadlessMcpReadAdapter.mts',
+                 'dev-tools/scripts/agent-support/tests/headless-plan-skill.unit.test.ts'),
+     'command': ('node_modules/typescript/bin/tsc',
+                 '--noEmit',
+                 '--strict',
+                 '--skipLibCheck',
+                 '--target',
+                 'ES2021',
+                 '--module',
+                 'commonjs',
+                 '--moduleResolution',
+                 'node',
+                 '--esModuleInterop',
+                 '--jsx',
+                 'react-jsx',
+                 '--lib',
+                 'ES2021,DOM',
+                 'dev-tools/scripts/qualification/headless-model-download/public-model-download-feature.ts')},
+    'headless-public-model-download-worker-fixture-unit': {'interpreter': 'python',
+     'automatic_sources': ('modules/adapters/runtime/python/worker/tests/model_source_identity_fixture.py',
+                           'modules/adapters/runtime/python/worker/tests/test_model_source_identity_fixture.py'),
+     'automatic_required_files': ('modules/adapters/runtime/python/worker/tests/model_source_identity_fixture.py',
+                                  'modules/adapters/runtime/python/worker/tests/test_model_source_identity_fixture.py'),
+     'sources': ('modules/adapters/runtime/python/worker/tests/model_source_identity_fixture.py',
+                 'modules/adapters/runtime/python/worker/tests/test_model_source_identity_fixture.py'),
+     'command': ('-B',
+                 '-m',
+                 'unittest',
+                 'modules.adapters.runtime.python.worker.tests.test_model_source_identity_fixture')},
     "headless-model-download-public-server-build": {
         "companion_to": "headless-model-download-public-unit",
         "sources": ("modules/hosts/server/composition/composeServerHost.ts", "apps/server/src/createServer.ts",
@@ -5588,6 +5669,25 @@ def plan(root: Path, paths: list[str], required: list[str], candidate: str) -> d
             if archive_sources.intersection(paths):
                 controller["argv"] += ["-k", "test_control_plane_archives.",
                                        "-k", "test_control_plane_journal_capacity."]
+    public_journeys = PUBLISHED_FORM_CHECKS["headless-public-model-download-journeys"]
+    public_journey_controller = "dev-tools/helpers/tests/test_control_plane_public_model_download_journeys.py"
+    journey_core = set(public_journeys["automatic_sources"]) | {
+        "modules/hosts/shared/composition/tests/headless-model-download-root-fixture.ts",
+        "modules/adapters/runtime/python/worker/tests/model_source_identity_fixture.py",
+        "modules/adapters/runtime/python/worker/tests/test_model_source_identity_fixture.py",
+        "dev-tools/helpers/control_plane/catalog.py", public_journey_controller}
+    if (journey_core <= set(paths) <= set(public_journeys["sources"])
+            and "focused-tests" not in explicit_required
+            and _automatic_files_available(root, public_journeys)
+            and _automatic_files_available(root, {"automatic_required_files": (public_journey_controller,
+                "dev-tools/helpers/tests/test_control_plane_model_download_public_roots.py",
+                "dev-tools/helpers/tests/test_control_plane_focused.py")})):
+        controller = next((check for check in selected if check["id"] == "control-plane"), None)
+        if controller is not None:
+            controller["argv"] = [sys.executable, "-B", "-m", "unittest", "discover",
+                "-s", "dev-tools/helpers/tests", "-p", "test_control_plane*.py",
+                "-k", "test_control_plane_public_model_download_journeys.",
+                "-k", "test_control_plane_model_download_public_roots.", "-k", "test_control_plane_focused."]
     value = {"schema_version": "check-plan-v1", "candidate": candidate, "catalog_digest": policy_digest(root, checks), "changed_paths": paths, "coverage": covered, "selected": selected, "deferred": [c["id"] for c in checks if c not in selected]}
     value["plan_digest"] = digest(value)
     return value
