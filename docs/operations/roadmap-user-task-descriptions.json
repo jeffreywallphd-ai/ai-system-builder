@@ -219,7 +219,7 @@
       "source_definition_digest": "236331c5e6371d409e54ec29954cd27267ca5b23b88d9232f1ae2a7d7ee6c5a9",
       "user_description": {
         "title": "Connect downloads and owned task controls",
-        "purpose": "Recheck provider facts outside the approval transaction and bind the exact source in both real hosts. Connect approved download execution, show progress and stop only the original assistant’s download. Support lookup by task or approved plan step. Missing or uncertain replies must not start another download or claim another task. Keep new public capability disabled until its complete status and save paths are qualified.",
+        "purpose": "Recheck provider facts outside the approval transaction and bind the exact source in both real hosts. Connect approved download execution, show progress and stop only the original assistant\u2019s download. Support lookup by task or approved plan step. Missing or uncertain replies must not start another download or claim another task. Keep new public capability disabled until its complete status and save paths are qualified.",
         "scope": [
           "Implementation progress and required parent technical checks remain separate."
         ]
@@ -1363,6 +1363,91 @@
         "purpose": "Test a small real image task with a connected agent on Desktop and in the Managed browser. Check actual image bytes, separate import approval, permissions, failures, resource limits and owned cleanup. Synthetic output cannot pass real execution checks.",
         "scope": [
           "Pending image work. Earlier source support supplies no runtime or parent qualification."
+        ]
+      }
+    },
+    {
+      "record_type": "task",
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "record_id": "connect-approved-model-downloads",
+      "source_definition_digest": "87ad3387959f66eafa9faf6014e1917d29a6532f3a1f3a8ccb61135777b7abb0",
+      "user_description": {
+        "title": "Connect approved model downloads on both hosts",
+        "purpose": "Let a connected AI client download an approved model and save its reviewed result in either app.",
+        "scope": [
+          "Show progress and allow supported cancellation.",
+          "Check the chosen version, permissions, file integrity, resource limits and cleanup.",
+          "Require separate approval before saving the model.",
+          "Agent work. No action is needed."
+        ]
+      }
+    },
+    {
+      "record_type": "task",
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "record_id": "connect-desktop-approved-training",
+      "source_definition_digest": "fc8fb1a4a483807acc8080eabfa6b596745cb964bf44dedc7716d6fe6a0e7272",
+      "user_description": {
+        "title": "Connect approved training in Desktop",
+        "purpose": "Let a connected AI client start and manage an approved training task in the Desktop app.",
+        "scope": [
+          "Use the approved model, dataset and settings.",
+          "Show progress and checkpoints. Allow supported cancellation and review the exact output files.",
+          "Save the trained model only after separate approval. Preserve permissions, resource limits and cleanup.",
+          "Agent work. No action is needed. No model accuracy test will be repeated."
+        ]
+      }
+    },
+    {
+      "record_type": "task",
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "record_id": "connect-managed-approved-training",
+      "source_definition_digest": "dcc1c8ec05b968deea14c0dc57152bb4930907af73f9e34a78782ada4eb0a834",
+      "user_description": {
+        "title": "Connect approved training in the Managed browser",
+        "purpose": "Let a connected AI client start and manage the same approved training workflow on a Managed server.",
+        "scope": [
+          "Check the current organization, workspace, user and client permissions.",
+          "Show progress, cancellation and current result review in the browser.",
+          "Require separate approval before saving the trained model. Preserve resource limits and cleanup.",
+          "Agent work. No action is needed. No model accuracy test will be repeated."
+        ]
+      }
+    },
+    {
+      "record_type": "task",
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "record_id": "prepare-paired-model-qualification-journeys",
+      "source_definition_digest": "a3177b99e71b68a0d60dfcf821bc27aec50397d1cfbafa2a54961cfa82e61afc",
+      "user_description": {
+        "title": "Prepare focused paired model workflow journeys",
+        "purpose": "Create focused tests that connect an AI client to the real app and check complete model workflows.",
+        "scope": [
+          "Cover download, training, progress, controlled evaluation results and exact saved replies.",
+          "Reuse the completed Model display and its consent and revoke controls.",
+          "Check rejected requests, recovery and cleanup with the already authorized small test models and limits.",
+          "Agent work. Actual execution still needs final qualification. Do not run accuracy tests or image models."
+        ]
+      }
+    },
+    {
+      "record_type": "task",
+      "roadmap_id": "headless-skills-ui-takeover",
+      "increment_id": "models-training-and-generation",
+      "record_id": "connect-managed-approved-conversations",
+      "source_definition_digest": "99c2b4291055f0ffd330063e2b2372b09cfb08f8347da368de260e26956801ee",
+      "user_description": {
+        "title": "Connect approved conversations in the Managed browser",
+        "purpose": "Let a connected AI client run an already approved conversation on a Managed server.",
+        "scope": [
+          "The user must first choose how to provide the server\u2019s private retry-protection key. Answer the open setup question in this chat. Do not send a key in chat.",
+          "The agent will then connect and test submission, progress, saved replies and retry protection.",
+          "Keep permissions and text private. Other model tasks can continue while this decision is pending.",
+          "No completed model accuracy test will be repeated."
         ]
       }
     }

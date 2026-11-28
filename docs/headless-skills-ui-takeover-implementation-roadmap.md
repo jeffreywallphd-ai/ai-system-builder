@@ -3,7 +3,7 @@
 # Headless Skills and Revocable UI Takeover Implementation Roadmap
 
 - Status: `executing`
-- Updated: `2026-11-28T04:55:15Z`
+- Updated: `2026-11-28T07:34:19Z`
 
 ## Objective
 
@@ -445,13 +445,14 @@ Select, download and verify an appropriate supported local model. Fine-tune and 
 
 Task counts show implementation tracking. Technical qualification remains separate.
 
-- **Discover and acquire supported models**: 5 of 5 tasks complete
+- **Discover and acquire supported models**: 5 of 6 tasks complete
   - Inspect installed models (`inspect-installed-models`): complete
   - Inspect the exact model source (`review-pinned-model-source`): complete
   - Execute an exact approved download (`execute-approved-model-download`): complete
   - Connect downloads and owned task controls (`monitor-and-cancel-model-download`): complete
   - Review and save the completed model (`review-and-save-downloaded-model`): complete
-- **Fine-tune and evaluate**: 68 of 68 tasks complete
+  - Connect approved model downloads on both hosts (`connect-approved-model-downloads`): planned
+- **Fine-tune and evaluate**: 68 of 70 tasks complete
   - Review fine-tuning inputs and settings (`review-fine-tuning-inputs-and-settings`): complete
   - Prepare training data and local loading controls (`prepare-local-training-files-and-load-policy`): complete
   - Inspect the selected local model files (`inspect-local-training-model-files`): complete
@@ -520,8 +521,12 @@ Task counts show implementation tracking. Technical qualification remains separa
   - Save a separately approved trained model (`save-approved-trained-model`): complete
   - Run a bounded fine-tuning task (`run-approved-fine-tuning`): complete
   - Evaluate and review the trained candidate (`evaluate-trained-model-candidate`): complete
-- **Generate and show results**: 1 of 2 tasks complete
+  - Connect approved training in Desktop (`connect-desktop-approved-training`): planned
+  - Connect approved training in the Managed browser (`connect-managed-approved-training`): planned
+- **Generate and show results**: 1 of 4 tasks complete
   - Generate and review supported text outputs (`generate-and-import-model-output`): complete
+  - Prepare focused paired model workflow journeys (`prepare-paired-model-qualification-journeys`): planned
+  - Connect approved conversations in the Managed browser (`connect-managed-approved-conversations`): planned
   - Show and qualify exact model outcomes (`qualify-model-workflows-on-hosts`): planned
 
 ### Deliverables
