@@ -3753,3 +3753,20 @@ loads. The closed adapter/catalog/controller scope selects only the related
 image and focused-runner controller modules. Missing/unknown inputs retain the
 conservative fallback. Do not infer actual generation, public host or parent
 qualification from these source checks.
+
+
+### Bounded approved text qualification
+
+The fixed `headless-text-workflow-unit` and strict type companion reuse original
+workflow metadata, approved dispatch, delegated transaction, conversation runtime
+adapter and Core/SQLite persistence. Their Python task boundary is controlled.
+The exact text scope routes only its controller and focused-runner regressions;
+unknown, missing or explicitly generic source impact retains conservative checks.
+
+`headless-bounded-text-feature` is explicit only. After reviewed source support,
+a separately bound qualification Work may execute one original offline Tiny
+text turn and verify its exact saved response and owned cleanup. The trusted
+installed interpreter/model settings, pinned files, unchanged native resource
+ceilings and private diagnostic limits are described in the qualification
+README. The generated cache is not supplier provenance. No model accuracy test,
+image execution, new download, public-host or parent qualification is implied.

@@ -172,3 +172,39 @@ Seven failed aggregate receipts retain original owners and charges. The latest
 user authorization also allows up to two additional verifications; these are not
 enabled by this one-use guard. Source tests are inert. No accuracy or download
 checks are added. Missing proof or replay denies without touching old files.
+
+
+## Explicit bounded text generation
+
+`bounded-text-generation-feature.ts` reuses the composed approved-conversation
+fixture and the original Python runtime. It runs one offline CPU turn with the
+existing generated Tiny Qwen2 input. It checks the original saved response,
+turn/run/result associations and replay. It does not score accuracy, train or
+register a model, download weights, run images or qualify either public host.
+
+The opt-in check is `headless-bounded-text-feature`. It is never selected by
+ordinary source changes. First complete and independently review the source Work;
+then create a separate exact task-outcome Work requiring that check. Use the
+existing `ASB_HEADLESS_TRAINING_TEST_PYTHON` and
+`ASB_HEADLESS_TRAINING_TEST_INPUT` trusted qualification settings. The executable
+and six input files must match the existing Tiny training profile hashes.
+The generated cache is a synthetic fixture, not a Hugging Face supplier revision.
+
+The original Windows Job retains the existing 2 GiB per-process, 4 GiB total,
+32-process and 690-second ceilings. Startup has 60 seconds; the app's original
+text task has its two-minute deadline, and the test has 240 seconds. Input is
+at most 1 MiB; admission requires 128 MiB spare disk plus copying headroom.
+Post-exit accounting permits at most 256 entries and 4 MiB in the fresh test root.
+This is bounded admission/accounting, not an operating-system disk quota.
+
+The child is CPU-only and offline. It inherits no provider credentials.
+Only the original supervisor shutdown, settled app task/database and identity-
+checked new-root cleanup can confirm retirement. Unknown files or owners stay
+retained. Do not automatically retry an unconfirmed physical run. Bounded numeric
+phase, lifecycle, output-length and cleanup diagnostics are exclusive files under
+ignored `.local-codex/headless-text-feature/`, at most 64 files of 4 KiB each.
+No prompt, response text, token, raw runtime error or private locator is reported.
+
+Source checks `headless-text-workflow-unit` and `headless-text-workflow-types`
+exercise Core/SQLite controlled Python responses and compile the real driver.
+They supply no physical inference or parent qualification.

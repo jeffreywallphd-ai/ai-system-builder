@@ -276,6 +276,15 @@ IMAGE_CHECKPOINT_REQUIRED = (
     "modules/adapters/model/local/tests/createApprovedImageCheckpointResolverAdapter.unit.test.ts",
 )
 IMAGE_GENERATION_OWNER_SUPPORT = IMAGE_GENERATION_OWNER_REQUIRED + (IMAGE_GENERATION_ADMISSION_PORT,) + IMAGE_CHECKPOINT_REQUIRED
+TEXT_WORKFLOW_TEST = "modules/hosts/desktop/composition/tests/desktop-headless-conversation.unit.test.ts"
+TEXT_WORKFLOW_FIXTURE = "modules/hosts/desktop/composition/tests/headless-text-workflow.fixture.ts"
+TEXT_WORKFLOW_FEATURE = "dev-tools/scripts/qualification/headless-training/bounded-text-generation-feature.ts"
+TEXT_WORKFLOW_CONTROLLER = "dev-tools/helpers/tests/test_control_plane_headless_text_generation.py"
+TEXT_WORKFLOW_REQUIRED = (TEXT_WORKFLOW_TEST, TEXT_WORKFLOW_FIXTURE, TEXT_WORKFLOW_FEATURE,
+    "dev-tools/scripts/qualification/headless-training/bounded-training-feature-profile.ts")
+TEXT_WORKFLOW_SCOPE = TEXT_WORKFLOW_REQUIRED + (TEXT_WORKFLOW_CONTROLLER,
+    "dev-tools/helpers/control_plane/catalog.py", "docs/operations/headless-text-generation-feature.json",
+    "dev-tools/scripts/qualification/headless-training/README.md", "docs/diagnostics/ai-development-control-plane.md")
 IMAGE_GENERATION_OWNER_CONTROLLER = "dev-tools/helpers/tests/test_control_plane_headless_image_generation.py"
 IMAGE_GENERATION_OWNER_SCOPE = IMAGE_GENERATION_OWNER_REQUIRED[:2] + IMAGE_GENERATION_OWNER_REQUIRED[-2:] + (IMAGE_GENERATION_OWNER_CONTROLLER,
     IMAGE_GENERATION_ADMISSION_PORT, "dev-tools/helpers/control_plane/catalog.py", "modules/application/README.md", "docs/architecture/runtime-model.md",
@@ -1050,6 +1059,22 @@ PUBLISHED_FORM_CHECKS = {
         "sources": TRAINING_EVALUATION_REQUIRED,
         "command": ("node_modules/typescript/bin/tsc", "--noEmit", "--strict", "--skipLibCheck", "--target", "ES2021",
             "--module", "commonjs", "--moduleResolution", "node", "--esModuleInterop", "--lib", "ES2021,DOM") + TRAINING_EVALUATION_REQUIRED,
+    },
+    "headless-text-workflow-unit": {
+        "automatic_sources": TEXT_WORKFLOW_REQUIRED[:3],
+        "automatic_required_files": TEXT_WORKFLOW_REQUIRED,
+        "sources": TEXT_WORKFLOW_SCOPE,
+        "command": ("--import", "tsx", "--test", "--test-reporter=tap", "--", TEXT_WORKFLOW_TEST),
+    },
+    "headless-text-workflow-types": {
+        "companion_to": "headless-text-workflow-unit", "sources": TEXT_WORKFLOW_SCOPE,
+        "command": ("node_modules/typescript/bin/tsc", "--noEmit", "--strict", "--skipLibCheck", "--target", "ES2021",
+            "--module", "commonjs", "--moduleResolution", "node", "--esModuleInterop", "--lib", "ES2021,DOM") + TEXT_WORKFLOW_REQUIRED[:3],
+    },
+    "headless-bounded-text-feature": {
+        "sources": TEXT_WORKFLOW_REQUIRED,
+        "command": ("--import", "tsx", "--test", "--test-reporter=tap", "--", TEXT_WORKFLOW_FEATURE),
+        "timeout": 300,
     },
     "headless-image-generation-owner-unit": {
         "automatic_sources": IMAGE_GENERATION_OWNER_REQUIRED[:2] + IMAGE_GENERATION_OWNER_REQUIRED[-2:] + (IMAGE_GENERATION_ADMISSION_PORT,) + IMAGE_CHECKPOINT_REQUIRED,
@@ -4745,6 +4770,16 @@ def plan(root: Path, paths: list[str], required: list[str], candidate: str) -> d
             controller["argv"] = [sys.executable, "-B", "-m", "unittest", "discover",
                 "-s", "dev-tools/helpers/tests", "-p", "test_control_plane*.py",
                 "-k", "test_control_plane_checkpoint_copy.", "-k", "test_control_plane_focused."]
+    if (paths and set(paths) <= set(TEXT_WORKFLOW_SCOPE)
+            and ("dev-tools/helpers/control_plane/catalog.py" in paths or TEXT_WORKFLOW_CONTROLLER in paths)
+            and "focused-tests" not in explicit_required
+            and _automatic_files_available(root, {"automatic_required_files": TEXT_WORKFLOW_REQUIRED +
+                (TEXT_WORKFLOW_CONTROLLER, "dev-tools/helpers/tests/test_control_plane_focused.py")})):
+        controller = next((check for check in selected if check["id"] == "control-plane"), None)
+        if controller is not None:
+            controller["argv"] = [sys.executable, "-B", "-m", "unittest", "discover",
+                "-s", "dev-tools/helpers/tests", "-p", "test_control_plane*.py",
+                "-k", "test_control_plane_headless_text_generation.", "-k", "test_control_plane_focused."]
     # Only a complete known storage scope can use the related framework suites.
     # Exact story/task sources have complete related controller coverage. Unknown
     # paths, missing support and an explicit generic request retain the fallback.

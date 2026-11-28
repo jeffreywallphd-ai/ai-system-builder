@@ -57,5 +57,13 @@
     "Current exact Task74 outcome verification and independent review.",
     "Task75 public paired Desktop and Managed MCP/application-view execution, exact result/reveal permission, resource refusal and owned cleanup.",
     "Image generation and separately approved image-output import remain in the user-directed later image increment."
-  ]
+  ],
+  "shared_fixture_support": {
+    "work_id": "headless-bounded-text-workflow-test",
+    "fixture": "modules/hosts/desktop/composition/tests/headless-text-workflow.fixture.ts",
+    "explicit_driver": "dev-tools/scripts/qualification/headless-training/bounded-text-generation-feature.ts",
+    "scope": "Reuse original composed workflow with controlled software cases or a separately invoked bounded installed-model runtime. Source checks execute controlled cases and compile the driver only.",
+    "actual_execution": "pending separate explicit qualification Work and original owned cleanup proof",
+    "quality_scored": false
+  }
 }
