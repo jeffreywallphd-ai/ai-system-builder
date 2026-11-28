@@ -1,0 +1,61 @@
+{
+  "schema_version": "headless-text-generation-feature-v1",
+  "roadmap_id": "headless-skills-ui-takeover",
+  "increment_id": "models-training-and-generation",
+  "task_id": "generate-and-import-model-output",
+  "source_work_id": "headless-composed-text-response-persistence",
+  "scope": "Original approved Desktop text workflow and saved response history, with controlled Python task data.",
+  "evidence_policy": "The current Work receipt and separate review govern this composed-software checkpoint. This matrix grants no task, runtime, host or parent qualification.",
+  "security_impact": {
+    "disposition": "security-relevant",
+    "protected_assets": "Current session execution approval, exact response/run/result lineage and truthful evidence; synthetic test data only.",
+    "boundary": "Tests connect existing production owners. No product authority, endpoint, dependency, supplier or runtime policy changes.",
+    "controls": [
+      "Original workspace/organization authorization and exact workflow revision precede delegated admission.",
+      "One original task persists its result after outward client access is withdrawn.",
+      "Headless handles/status contain no prompt or response text. Only ordinary transcript reads show saved content.",
+      "Fresh test roots require original database and host-work settlement before identity-checked cleanup."
+    ],
+    "rollback": "Revert this test/document slice without altering product authority or stored user data.",
+    "residual_risk": "Controlled runtime data cannot prove model loading, device/memory limits, physical worker retirement, actual UI disclosure or Managed host execution."
+  },
+  "test_file": "modules/hosts/desktop/composition/tests/desktop-headless-conversation.unit.test.ts",
+  "new_composed_cases": 2,
+  "engines": [
+    "Core",
+    "SQLite"
+  ],
+  "reused_owners": [
+    "HeadlessWorkflowMetadataUseCase",
+    "composeDesktopHeadlessConversation",
+    "HeadlessApprovedConversationDispatchUseCase",
+    "createLocalDelegatedConversationTurnAdmission",
+    "SubmitConversationTurnUseCase",
+    "composeConversationExecutionServices",
+    "createPythonConversationalTextGenerationInvocationAdapter",
+    "ConversationTranscriptReadModelService"
+  ],
+  "checked_behaviors": [
+    "Discover the original approved session and bind its current workflow snapshot.",
+    "Deny a stale source revision before a runtime task starts.",
+    "Replay one accepted handle; conflicting text cannot start another task.",
+    "Read the original running task and retain truthful unsupported cancellation.",
+    "Withdraw outward access during the accepted task; still record that original task's result.",
+    "Use new repository objects to verify exact saved turn, run, assistant response and execution-result associations.",
+    "Read the saved assistant response in the ordinary transcript and recover the same handle after restored access.",
+    "Keep prompts and responses out of Headless metadata/status/handles; clean only fresh owned fixture roots."
+  ],
+  "output_semantics": "The exact conversation-session execution approval covers ordinary assistant-response/transcript saving. This is not separately approved artifact import or export.",
+  "controlled_boundary": "PythonRuntimePort health/capability/task results are fixed synthetic values. Workflow preparation, application orchestration, runtime adapter and persistence owners are original.",
+  "model_called": false,
+  "model_quality_tested": false,
+  "artifact_imported": false,
+  "task_completed": false,
+  "parent_qualified": false,
+  "pending": [
+    "Actual bounded supported text inference through the original composed path, without accuracy scoring.",
+    "Current exact Task74 outcome verification and independent review.",
+    "Task75 public paired Desktop and Managed MCP/application-view execution, exact result/reveal permission, resource refusal and owned cleanup.",
+    "Image generation and separately approved image-output import remain in the user-directed later image increment."
+  ]
+}
